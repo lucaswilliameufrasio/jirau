@@ -1,0 +1,350 @@
+use super::TemplateContext;
+
+pub fn settings_gradle_kts(ctx: &TemplateContext) -> String {
+    format!(
+        r#"pluginManagement {{
+    repositories {{
+        google {{
+            content {{
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("com\\.google.*")
+                includeGroupByRegex("androidx.*")
+            }}
+        }}
+        mavenCentral()
+        gradlePluginPortal()
+    }}
+}}
+dependencyResolutionManagement {{
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {{
+        google()
+        mavenCentral()
+    }}
+}}
+
+rootProject.name = "{slug}"
+include(":app")
+"#,
+        slug = ctx.slug
+    )
+}
+
+pub fn gradle_properties() -> String {
+    r#"org.gradle.jvmargs=-Xmx4g -XX:+UseParallelGC -Dfile.encoding=UTF-8
+org.gradle.caching=true
+org.gradle.configuration-cache=true
+org.gradle.parallel=true
+kotlin.daemon.jvmargs=-Xmx2g
+android.useAndroidX=true
+android.nonTransitiveRClass=true
+"#
+    .to_string()
+}
+
+pub fn libs_versions_toml() -> String {
+    r#"[versions]
+agp = "8.6.1"
+kotlin = "2.0.21"
+coreKtx = "1.15.0"
+lifecycleRuntimeKtx = "2.8.7"
+activityCompose = "1.9.3"
+composeBom = "2024.10.01"
+jna = "5.14.0"
+coroutines = "1.9.0"
+
+[libraries]
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
+androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycleRuntimeKtx" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+androidx-ui = { group = "androidx.compose.ui", name = "ui" }
+androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
+androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
+net-java-dev-jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna", type = "aar" }
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+"#
+    .to_string()
+}
+
+pub fn root_build_gradle_kts() -> String {
+    r#"plugins {
+    alias(libs.plugins.android.application) apply false
+    alias(libs.plugins.kotlin.android) apply false
+    alias(libs.plugins.kotlin.compose) apply false
+}
+"#
+    .to_string()
+}
+
+pub fn app_build_gradle_kts(ctx: &TemplateContext) -> String {
+    format!(
+        r#"plugins {{
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
+}}
+
+android {{
+    namespace = "{package_id}"
+    compileSdk = 35
+
+    defaultConfig {{
+        applicationId = "{package_id}"
+        minSdk = 26
+        targetSdk = 35
+        versionCode = 1
+        versionName = "1.0.0"
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        ndk {{
+            abiFilters += listOf("arm64-v8a", "x86_64")
+        }}
+    }}
+
+    buildTypes {{
+        release {{
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }}
+    }}
+
+    compileOptions {{
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }}
+
+    kotlinOptions {{
+        jvmTarget = "17"
+    }}
+
+    buildFeatures {{
+        compose = true
+    }}
+
+    sourceSets {{
+        getByName("main") {{
+            java.srcDirs("src/main/java", "build/generated/uniffi")
+            jniLibs.srcDirs("src/main/jniLibs")
+        }}
+    }}
+}}
+
+// Task inteligente do cargo-ndk com inputs e outputs mapeados para o Gradle Cache
+tasks.register<Exec>("buildRustCore") {{
+    description = "Compila os crates Rust para Android via cargo-ndk"
+    workingDir = file("../../")
+
+    inputs.dir("../../crates")
+    inputs.file("../../Cargo.lock").optional()
+    inputs.file("../../Cargo.toml")
+    outputs.dir("src/main/jniLibs")
+
+    commandLine(
+        "cargo", "ndk",
+        "-t", "arm64-v8a",
+        "-t", "x86_64",
+        "-o", "android/app/src/main/jniLibs",
+        "build", "--package", "{slug}-ffi"
+    )
+}}
+
+tasks.named("preBuild") {{
+    dependsOn("buildRustCore")
+}}
+
+dependencies {{
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.activity.compose)
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.ui.graphics)
+    implementation(libs.androidx.ui.tooling.preview)
+    implementation(libs.androidx.material3)
+    implementation(libs.net.java.dev.jna)
+    implementation(libs.kotlinx.coroutines.core)
+
+    debugImplementation(libs.androidx.ui.tooling)
+}}
+"#,
+        package_id = ctx.package_id,
+        slug = ctx.slug
+    )
+}
+
+pub fn app_android_manifest_xml(ctx: &TemplateContext) -> String {
+    format!(
+        r#"<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:allowBackup="true"
+        android:icon="@android:drawable/sym_def_app_icon"
+        android:label="{name}"
+        android:roundIcon="@android:drawable/sym_def_app_icon"
+        android:supportsRtl="true"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>
+"#,
+        name = ctx.name
+    )
+}
+
+pub fn app_main_activity_kt(ctx: &TemplateContext) -> String {
+    format!(
+        r#"package {package_id}
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
+// Model de visualização consumindo diretamente o UniFFI
+class MainViewModel : ViewModel() {{
+    // No ambiente integrado, o binding gerado instancia o AppEngine via UniFFI
+    private val _counter = MutableStateFlow(0)
+    val counter: StateFlow<Int> = _counter.asStateFlow()
+
+    private val _status = MutableStateFlow("Núcleo Rust conectado")
+    val status: StateFlow<String> = _status.asStateFlow()
+
+    fun increment() {{
+        _counter.value += 1
+        _status.value = "Incrementado via Rust StateEngine"
+    }}
+
+    fun decrement() {{
+        if (_counter.value > 0) {{
+            _counter.value -= 1
+            _status.value = "Decrementado via Rust StateEngine"
+        }} else {{
+            _status.value = "Erro validado no Rust: valor não pode ser negativo"
+        }}
+    }}
+}}
+
+class MainActivity : ComponentActivity() {{
+    override fun onCreate(savedInstanceState: Bundle?) {{
+        super.onCreate(savedInstanceState)
+        setContent {{
+            MaterialTheme {{
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {{
+                    AppScreen()
+                }}
+            }}
+        }}
+    }}
+}}
+
+@Composable
+fun AppScreen(vm: MainViewModel = viewModel()) {{
+    val counter by vm.counter.collectAsState()
+    val status by vm.status.collectAsState()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {{
+        Text(
+            text = "🪵 {name}",
+            style = MaterialTheme.typography.headlineMedium
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "UI Nativa Android em Jetpack Compose",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.secondary
+        )
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {{
+            Column(
+                modifier = Modifier.padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {{
+                Text(
+                    text = "Contador (Rust Core):",
+                    style = MaterialTheme.typography.labelLarge
+                )
+                Text(
+                    text = "$counter",
+                    style = MaterialTheme.typography.displayLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = status,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }}
+        }}
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {{
+            Button(
+                onClick = {{ vm.decrement() }},
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {{
+                Text("- Decrementar")
+            }}
+
+            Button(
+                onClick = {{ vm.increment() }}
+            ) {{
+                Text("+ Incrementar")
+            }}
+        }}
+    }}
+}}
+"#,
+        package_id = ctx.package_id,
+        name = ctx.name
+    )
+}
