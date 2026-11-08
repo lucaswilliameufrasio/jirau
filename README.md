@@ -10,7 +10,9 @@
 [![Android](https://img.shields.io/badge/Android-Jetpack%20Compose-green.svg?logo=android)](https://developer.android.com/compose)
 [![iOS](https://img.shields.io/badge/iOS-SwiftUI-black.svg?logo=apple)](https://developer.apple.com/xcode/swiftui/)
 [![UniFFI](https://img.shields.io/badge/FFI-Mozilla%20UniFFI-purple.svg)](https://mozilla.github.io/uniffi-rs/)
-[![Status](https://img.shields.io/badge/status-em%20desenvolvimento-blue.svg)](#roadmap)
+[![Release](https://img.shields.io/github/v/release/lucaswilliameufrasio/jirau?color=blue&logo=github)](https://github.com/lucaswilliameufrasio/jirau/releases/latest)
+[![CI](https://img.shields.io/github/actions/workflow/status/lucaswilliameufrasio/jirau/ci.yml?branch=main&label=CI&logo=githubactions)](https://github.com/lucaswilliameufrasio/jirau/actions/workflows/ci.yml)
+[![Status](https://img.shields.io/badge/status-v0.1.0%20ativo-success.svg)](#roadmap)
 
 </div>
 
@@ -86,6 +88,27 @@ Fluxo direto inspirado no ecossistema Flutter:
 
 ---
 
+## 🚀 Instalação
+
+Você pode instalar os binários pré-compilados diretamente via script oficial:
+
+### Linux e macOS
+```bash
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/lucaswilliameufrasio/jirau/releases/download/v0.1.0/jirau-installer.sh | sh
+```
+
+### Windows (PowerShell)
+```powershell
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/lucaswilliameufrasio/jirau/releases/download/v0.1.0/jirau-installer.ps1 | iex"
+```
+
+### Via Cargo
+```bash
+cargo install --git https://github.com/lucaswilliameufrasio/jirau.git
+```
+
+---
+
 ## 📋 Pré-requisitos & Ferramentas
 
 O `jirau doctor` diagnostica e ajuda a instalar os itens necessários:
@@ -102,12 +125,17 @@ O `jirau doctor` diagnostica e ajuda a instalar os itens necessários:
 ## 🗺️ Roadmap de Desenvolvimento
 
 - [x] **Fase 0: Concepção & Arquitetura** ([`docs/development-plan.md`](docs/development-plan.md))
-- [ ] **Fase 1: Extração do Template Base** (migração UniFFI, `project.yml`, ajustes de cache no Gradle)
-- [ ] **Fase 2: CLI Core (`new` e `doctor`)** (geração de scaffolding e validação do ambiente)
-- [ ] **Fase 3: Hot Loop Android (`dev` & `bindings`)** (file watcher, compilação de ABI única e push via adb)
-- [ ] **Fase 4: Suporte iOS (`dev` & `build`)** (integração com XcodeGen, XCFramework e simctl)
-- [ ] **Fase 5: Dogfooding & Validação Real** (validação de ponta a ponta na geração de apps satélites)
-- [ ] **Fase 6: Release & Upgrades** (suporte a release multi-ABI e merge de template de 3 vias)
+- [x] **Fase 1: Extração e Consolidação de Templates** (UniFFI, Compose, SwiftUI, XcodeGen `project.yml`, caches do Gradle e Cargo)
+- [x] **Fase 2: CLI Core Guiada (`new` e `doctor`)** (assistente passo a passo com `inquire`, diagnóstico de ambiente com sugestões exatas de correção e suporte a `--json`)
+- [x] **Fase 3: Hot Loop Android (`dev` & `bindings`)** (detecção automática de ABI por `adb`, compilação incremental de ABI única via `cargo-ndk`, file watcher com `notify` e bindings Kotlin)
+- [x] **Fase 4: Suporte iOS (`dev`, `bindings` & `build`)** (integração com XcodeGen declarativo, XCFramework e simuladores)
+- [x] **Fase 5: Dogfooding & Suíte de Testes** (testes unitários e teste de integração ponta a ponta gerando apps temporários e validando `cargo test`)
+- [x] **Fase 6: Automação de Release & Distribuição** (pipeline `cargo-dist`, changelog automático via `git-cliff`, binários para Linux, macOS e Windows na v0.1.0)
+
+### Próximos Passos (v0.2+)
+- [ ] TUI expandida para seleção de bibliotecas opcionais de UI e persistência (ex: SQLite embutido via `rusqlite`).
+- [ ] Suporte opcional a Amper para projetos Android além do Gradle.
+- [ ] Comando `jirau upgrade` com merge de templates de três vias para sincronizar melhorias nos apps gerados.
 
 ---
 
