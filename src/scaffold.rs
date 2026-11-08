@@ -95,6 +95,24 @@ impl Scaffolder {
                 android::app_main_activity_kt(ctx),
             )?;
             fs::write(jni_libs_dir.join(".gitkeep"), "")?;
+
+            if ctx.android_build_system == "amper" {
+                fs::write(
+                    android_dir.join("module.yaml"),
+                    android::amper_module_yaml(ctx),
+                )?;
+                fs::write(
+                    android_dir.join("project.yaml"),
+                    android::amper_project_yaml(),
+                )?;
+                let amper_script = android_dir.join("amper");
+                fs::write(&amper_script, android::amper_wrapper_sh())?;
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    let _ = fs::set_permissions(&amper_script, fs::Permissions::from_mode(0o755));
+                }
+            }
         }
 
         // 5. iOS
@@ -198,5 +216,41 @@ mod tests {
 
         // Duplicate protection
         assert!(Scaffolder::create_project(&ctx, temp.path()).is_err());
+    }
+
+    #[test]
+    fn test_scaffolding_with_sqlite_and_amper() {
+        let temp = tempdir().unwrap();
+        let ctx = TemplateContext::with_options(
+            "Tucupi App",
+            "com.lucas.tucupi",
+            vec!["android".to_string()],
+            "sqlite",
+            "amper",
+            "0.2.0",
+        );
+
+        Scaffolder::create_project(&ctx, temp.path()).unwrap();
+        let root = temp.path().join("tucupi-app");
+
+        // Amper checks
+        assert!(root.join("android/module.yaml").exists());
+        assert!(root.join("android/project.yaml").exists());
+        assert!(root.join("android/amper").exists());
+
+        // SQLite checks
+        let core_cargo =
+            std::fs::read_to_string(root.join("crates/tucupi-app-core/Cargo.toml")).unwrap();
+        assert!(core_cargo.contains("rusqlite"));
+
+        let core_lib =
+            std::fs::read_to_string(root.join("crates/tucupi-app-core/src/lib.rs")).unwrap();
+        assert!(core_lib.contains("StorageEngine"));
+        assert!(core_lib.contains("kv_store"));
+
+        let jirau_toml = std::fs::read_to_string(root.join("jirau.toml")).unwrap();
+        assert!(jirau_toml.contains("storage = \"sqlite\""));
+        assert!(jirau_toml.contains("android_build_system = \"amper\""));
+        assert!(jirau_toml.contains("template_version = \"0.2.0\""));
     }
 }

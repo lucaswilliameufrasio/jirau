@@ -1,6 +1,6 @@
 [package]
 name = "jirau"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["Lucas Eufrasio <lucaswilliameufrasio@users.noreply.github.com>"]
 description = "CLI de scaffold nativo multiplataforma (Rust + Android Jetpack Compose + iOS SwiftUI) via UniFFI."
@@ -19,9 +19,9 @@ anyhow = "1.0"
 which = "6.0"
 walkdir = "2.5"
 notify = "6.1"
+tempfile = "3.10"
 
 [dev-dependencies]
-tempfile = "3.10"
 
 # The profile that 'dist' will build with
 [profile.dist]

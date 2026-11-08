@@ -13,7 +13,7 @@
 [![UniFFI](https://img.shields.io/badge/FFI-Mozilla%20UniFFI-purple.svg)](https://mozilla.github.io/uniffi-rs/)
 [![Release](https://img.shields.io/github/v/release/lucaswilliameufrasio/jirau?color=blue&logo=github)](https://github.com/lucaswilliameufrasio/jirau/releases/latest)
 [![CI](https://img.shields.io/github/actions/workflow/status/lucaswilliameufrasio/jirau/ci.yml?branch=main&label=CI&logo=githubactions)](https://github.com/lucaswilliameufrasio/jirau/actions/workflows/ci.yml)
-[![Status](https://img.shields.io/badge/status-v0.1.0%20ativo-success.svg)](#roadmap)
+[![Status](https://img.shields.io/badge/status-v0.2.0%20ativo-success.svg)](#roadmap)
 
 </div>
 
@@ -82,12 +82,13 @@ Fluxo direto inspirado no ecossistema Flutter:
 
 | Comando | O que faz | Equivalente Flutter |
 | :--- | :--- | :--- |
-| `jirau new <nome>` | Cria um projeto interativo ou via flags (`--android`, `--ios`, `--desktop`, `--package`). | `flutter create` |
+| `jirau new <nome>` | Cria um projeto interativo ou via flags (`--android`, `--ios`, `--desktop`, `--sqlite`, `--amper`). | `flutter create` |
 | `jirau add <plataforma>` | Adiciona uma plataforma a um projeto existente (`jirau add desktop`, `android`, `ios`). | `flutter create . --platforms` |
-| `jirau doctor` | Valida rustup, targets móveis, NDK, JDK, Xcode, e dependências do Desktop (Rune/GPU). | `flutter doctor` |
+| `jirau doctor` | Valida rustup, targets móveis, NDK, JDK, Xcode, Amper e dependências Desktop (Rune/GPU). | `flutter doctor` |
 | `jirau dev [android\|ios\|desktop]` | Hot loop: compila e executa o app com recarregamento/reinício rápido ao alterar `crates/`. | `flutter run` |
 | `jirau bindings` | Regera os wrappers Kotlin e Swift a partir das anotações em `-ffi`. | `build_runner` |
 | `jirau build [android\|ios\|desktop] --release` | Compila os binários finais (APK/AAB, XCFramework ou binário de desktop otimizado). | `flutter build` |
+| `jirau upgrade [--force]` | Sincroniza melhorias do template via 3-way merge preservando modificações manuais. | `flutter upgrade` |
 
 ### Otimizações do `jirau dev`
 - **Detecção automática de ABI:** Inspeciona o emulador ou aparelho conectado (`adb shell getprop ro.product.cpu.abi`) e compila apenas o target necessário (`arm64-v8a` no celular físico ou `x86_64` no emulador).
@@ -145,9 +146,13 @@ O `jirau doctor` diagnostica e ajuda a instalar os itens necessários:
 - [x] **Fase 6: Automação de Release & Distribuição** (pipeline `cargo-dist`, changelog automático via `git-cliff`, binários para Linux, macOS e Windows na v0.1.0)
 
 ### Próximos Passos (v0.2+)
-- [ ] TUI expandida para seleção de bibliotecas opcionais de UI e persistência (ex: SQLite embutido via `rusqlite`).
-- [ ] Suporte opcional a Amper para projetos Android além do Gradle.
-- [ ] Comando `jirau upgrade` com merge de templates de três vias para sincronizar melhorias nos apps gerados.
+- [x] **TUI expandida para seleção de persistência:** SQLite embutido via `rusqlite` diretamente no core Rust (`--sqlite`, com suporte a in-memory e arquivos locais).
+- [x] **Suporte opcional a Amper para projetos Android além do Gradle:** especificações declarativas com `module.yaml`, `project.yaml` e wrapper executável (`--amper`).
+- [x] **Comando `jirau upgrade` com merge de templates de três vias:** sincronização automática de templates preservando edições manuais (`jirau upgrade [--force] [--dry-run]`).
+
+### Futuro (v0.3+)
+- [ ] Suporte opcional a plugins e temas customizados de UI para Compose e SwiftUI.
+- [ ] Geração automática de testes de integração FFI end-to-end simulando ciclo de vida nativo.
 
 ---
 

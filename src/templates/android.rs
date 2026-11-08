@@ -1,6 +1,34 @@
 use super::TemplateContext;
 
 pub fn settings_gradle_kts(ctx: &TemplateContext) -> String {
+    if ctx.android_build_system == "amper" {
+        return format!(
+            r#"pluginManagement {{
+    repositories {{
+        google {{
+            content {{
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("com\\.google.*")
+                includeGroupByRegex("androidx.*")
+            }}
+        }}
+        mavenCentral()
+        gradlePluginPortal()
+    }}
+    plugins {{
+        id("org.jetbrains.amper.settings.plugin") version "0.5.0"
+    }}
+}}
+plugins {{
+    id("org.jetbrains.amper.settings.plugin")
+}}
+
+rootProject.name = "{slug}"
+"#,
+            slug = ctx.slug
+        );
+    }
+
     format!(
         r#"pluginManagement {{
     repositories {{
@@ -28,6 +56,62 @@ include(":app")
 "#,
         slug = ctx.slug
     )
+}
+
+pub fn amper_module_yaml(ctx: &TemplateContext) -> String {
+    format!(
+        r#"# JetBrains Amper declarative module specification
+product:
+  type: android/app
+
+settings:
+  compose: enabled
+  kotlin:
+    languageVersion: "2.0"
+  android:
+    compileSdk: 35
+    minSdk: 26
+    targetSdk: 35
+    namespace: "{package_id}"
+
+dependencies:
+  - androidx.core:core-ktx:1.15.0
+  - androidx.lifecycle:lifecycle-runtime-ktx:2.8.7
+  - androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7
+  - androidx.activity:activity-compose:1.9.3
+  - androidx.compose.ui:ui:1.7.5
+  - androidx.compose.ui:ui-graphics:1.7.5
+  - androidx.compose.ui:ui-tooling-preview:1.7.5
+  - androidx.compose.material3:material3:1.3.1
+  - net.java.dev.jna:jna:5.14.0@aar
+  - org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0
+"#,
+        package_id = ctx.package_id
+    )
+}
+
+pub fn amper_project_yaml() -> String {
+    r#"# JetBrains Amper project catalog
+modules:
+  - .
+"#
+    .to_string()
+}
+
+pub fn amper_wrapper_sh() -> String {
+    r#"#!/usr/bin/env sh
+# Wrapper executável para o JetBrains Amper
+DIR="$(cd "$(dirname "$0")" && pwd)"
+if command -v amper >/dev/null 2>&1; then
+    exec amper "$@"
+elif [ -f "$DIR/gradlew" ]; then
+    exec "$DIR/gradlew" "$@"
+else
+    echo "Erro: Amper CLI ou Gradle Wrapper não encontrados em $DIR"
+    exit 1
+fi
+"#
+    .to_string()
 }
 
 pub fn gradle_properties() -> String {

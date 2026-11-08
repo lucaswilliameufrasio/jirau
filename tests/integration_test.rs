@@ -122,3 +122,110 @@ fn test_desktop_scaffold_and_add() {
     let jirau_toml = std::fs::read_to_string(mobile_dir.join("jirau.toml")).unwrap();
     assert!(jirau_toml.contains("desktop"));
 }
+
+#[test]
+fn test_sqlite_and_amper_scaffold() {
+    let temp = tempdir().unwrap();
+    let jirau_bin = env!("CARGO_BIN_EXE_jirau");
+
+    let status = Command::new(jirau_bin)
+        .current_dir(temp.path())
+        .args([
+            "new",
+            "sql-amper-app",
+            "--package",
+            "com.test.sqlamper",
+            "--android",
+            "--sqlite",
+            "--amper",
+            "--non-interactive",
+        ])
+        .status()
+        .expect("Falha ao criar sql-amper-app");
+
+    assert!(
+        status.success(),
+        "jirau new com --sqlite e --amper deve ter sucesso"
+    );
+
+    let app_dir = temp.path().join("sql-amper-app");
+
+    // Amper verification
+    assert!(app_dir.join("android/module.yaml").exists());
+    assert!(app_dir.join("android/project.yaml").exists());
+    assert!(app_dir.join("android/amper").exists());
+
+    let module_yaml = std::fs::read_to_string(app_dir.join("android/module.yaml")).unwrap();
+    assert!(module_yaml.contains("namespace: \"com.test.sqlamper\""));
+
+    // SQLite verification
+    let core_cargo =
+        std::fs::read_to_string(app_dir.join("crates/sql-amper-app-core/Cargo.toml")).unwrap();
+    assert!(core_cargo.contains("rusqlite"));
+
+    let core_lib =
+        std::fs::read_to_string(app_dir.join("crates/sql-amper-app-core/src/lib.rs")).unwrap();
+    assert!(core_lib.contains("StorageEngine"));
+    assert!(core_lib.contains("kv_store"));
+
+    let jirau_toml = std::fs::read_to_string(app_dir.join("jirau.toml")).unwrap();
+    assert!(jirau_toml.contains("storage = \"sqlite\""));
+    assert!(jirau_toml.contains("android_build_system = \"amper\""));
+}
+
+#[test]
+fn test_upgrade_three_way_merge() {
+    let temp = tempdir().unwrap();
+    let jirau_bin = env!("CARGO_BIN_EXE_jirau");
+
+    // 1. Scaffold a project
+    let status = Command::new(jirau_bin)
+        .current_dir(temp.path())
+        .args([
+            "new",
+            "upgrade-test",
+            "--package",
+            "com.test.upgrade",
+            "--android",
+            "--non-interactive",
+        ])
+        .status()
+        .expect("Falha ao invocar new");
+    assert!(status.success());
+
+    let app_dir = temp.path().join("upgrade-test");
+
+    // 2. Simulate an older template version 0.1.0 in jirau.toml
+    let config_path = app_dir.join("jirau.toml");
+    let config_content = std::fs::read_to_string(&config_path).unwrap();
+    let old_config = config_content.replace(
+        "template_version = \"0.2.0\"",
+        "template_version = \"0.1.0\"",
+    );
+    std::fs::write(&config_path, old_config).unwrap();
+
+    // 3. Simulate user modification in TESTING_STANDARD.md
+    let testing_md = app_dir.join("TESTING_STANDARD.md");
+    let orig_md = std::fs::read_to_string(&testing_md).unwrap();
+    let user_md = format!(
+        "{}\n<!-- Linha customizada pelo desenvolvedor -->\n",
+        orig_md
+    );
+    std::fs::write(&testing_md, &user_md).unwrap();
+
+    // 4. Run jirau upgrade
+    let status = Command::new(jirau_bin)
+        .current_dir(&app_dir)
+        .arg("upgrade")
+        .status()
+        .expect("Falha ao invocar jirau upgrade");
+    assert!(status.success(), "jirau upgrade deve ter sucesso");
+
+    // 5. Verify template_version was bumped to 0.2.0
+    let updated_config = std::fs::read_to_string(&config_path).unwrap();
+    assert!(updated_config.contains("template_version = \"0.2.0\""));
+
+    // 6. Verify user's custom line was preserved
+    let updated_md = std::fs::read_to_string(&testing_md).unwrap();
+    assert!(updated_md.contains("Linha customizada pelo desenvolvedor"));
+}

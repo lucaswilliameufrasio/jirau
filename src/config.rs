@@ -21,10 +21,26 @@ pub struct AppConfig {
     pub version: String,
     #[serde(default = "default_platforms")]
     pub platforms: Vec<String>,
+    #[serde(default = "default_storage")]
+    pub storage: String,
+    #[serde(default = "default_android_build_system")]
+    pub android_build_system: String,
 }
 
 fn default_platforms() -> Vec<String> {
-    vec!["android".to_string(), "ios".to_string()]
+    vec![
+        "android".to_string(),
+        "ios".to_string(),
+        "desktop".to_string(),
+    ]
+}
+
+fn default_storage() -> String {
+    "none".to_string()
+}
+
+fn default_android_build_system() -> String {
+    "gradle".to_string()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -66,7 +82,7 @@ pub struct MetaConfig {
 }
 
 fn default_template_version() -> String {
-    "0.1.0".to_string()
+    "0.2.0".to_string()
 }
 
 impl Default for MetaConfig {
@@ -79,13 +95,21 @@ impl Default for MetaConfig {
 
 impl JirauConfig {
     #[allow(dead_code)]
-    pub fn new(name: &str, package_id: &str, platforms: Vec<String>) -> Self {
+    pub fn new(
+        name: &str,
+        package_id: &str,
+        platforms: Vec<String>,
+        storage: &str,
+        android_build_system: &str,
+    ) -> Self {
         Self {
             app: AppConfig {
                 name: name.to_string(),
                 package_id: package_id.to_string(),
                 version: "0.1.0".to_string(),
                 platforms,
+                storage: storage.to_string(),
+                android_build_system: android_build_system.to_string(),
             },
             dev: DevConfig::default(),
             meta: MetaConfig::default(),
@@ -137,7 +161,9 @@ mod tests {
         let cfg = JirauConfig::new(
             "meu-app",
             "com.example.meuapp",
-            vec!["android".into(), "ios".into()],
+            vec!["android".into(), "ios".into(), "desktop".into()],
+            "sqlite",
+            "amper",
         );
         cfg.write_to_dir(dir.path()).unwrap();
 
@@ -145,7 +171,10 @@ mod tests {
         let parsed: JirauConfig = toml::from_str(&read_back).unwrap();
         assert_eq!(parsed.app.name, "meu-app");
         assert_eq!(parsed.app.package_id, "com.example.meuapp");
-        assert_eq!(parsed.app.platforms, vec!["android", "ios"]);
+        assert_eq!(parsed.app.platforms, vec!["android", "ios", "desktop"]);
+        assert_eq!(parsed.app.storage, "sqlite");
+        assert_eq!(parsed.app.android_build_system, "amper");
         assert_eq!(parsed.dev.default_android_abi, "arm64-v8a");
+        assert_eq!(parsed.meta.template_version, "0.2.0");
     }
 }

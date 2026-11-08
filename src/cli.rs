@@ -33,8 +33,19 @@ pub enum Commands {
     /// Adiciona uma nova plataforma a um projeto existente (ex: jirau add desktop)
     Add(AddArgs),
 
-    /// Verifica a versão do template e atualizações do jirau
-    Upgrade,
+    /// Sincroniza e atualiza o template do projeto via 3-way merge
+    Upgrade(UpgradeArgs),
+}
+
+#[derive(Args, Debug, Default)]
+pub struct UpgradeArgs {
+    /// Força o upgrade mesmo que o projeto já esteja na versão mais recente
+    #[arg(short, long)]
+    pub force: bool,
+
+    /// Simula as alterações sem gravar nada em disco
+    #[arg(long)]
+    pub dry_run: bool,
 }
 
 #[derive(Args, Debug)]
@@ -63,6 +74,22 @@ pub struct NewArgs {
     /// Inclui suporte para Desktop (UI em Rust com Rune)
     #[arg(long)]
     pub desktop: bool,
+
+    /// Camada de persistência local (none, sqlite)
+    #[arg(long)]
+    pub storage: Option<String>,
+
+    /// Ativa SQLite embutido via rusqlite
+    #[arg(long)]
+    pub sqlite: bool,
+
+    /// Sistema de build do Android (gradle, amper)
+    #[arg(long)]
+    pub android_build_system: Option<String>,
+
+    /// Usa JetBrains Amper como sistema de build do Android
+    #[arg(long)]
+    pub amper: bool,
 
     /// Não pergunta nada de forma interativa (usa padrões para valores ausentes)
     #[arg(long)]

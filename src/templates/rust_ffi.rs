@@ -45,6 +45,71 @@ pub fn ffi_build_rs() -> String {
 }
 
 pub fn ffi_lib_rs(ctx: &TemplateContext) -> String {
+    let sqlite_ffi = if ctx.storage == "sqlite" {
+        r#"
+#[derive(uniffi::Record)]
+pub struct NativeStorageItem {
+    pub key: String,
+    pub value: String,
+}
+
+#[derive(uniffi::Object)]
+pub struct NativeStorage {
+    inner: Mutex<core::StorageEngine>,
+}
+
+#[uniffi::export]
+impl NativeStorage {
+    #[uniffi::constructor]
+    pub fn in_memory() -> Result<Self, NativeError> {
+        let engine = core::StorageEngine::in_memory().map_err(Into::into)?;
+        Ok(Self { inner: Mutex::new(engine) })
+    }
+
+    #[uniffi::constructor]
+    pub fn open(path: String) -> Result<Self, NativeError> {
+        let engine = core::StorageEngine::open(&path).map_err(Into::into)?;
+        Ok(Self { inner: Mutex::new(engine) })
+    }
+
+    pub fn set_item(&self, key: String, value: String) -> Result<(), NativeError> {
+        let engine = self.inner.lock().unwrap();
+        engine.set_item(&key, &value).map_err(Into::into)
+    }
+
+    pub fn get_item(&self, key: String) -> Result<Option<String>, NativeError> {
+        let engine = self.inner.lock().unwrap();
+        engine.get_item(&key).map_err(Into::into)
+    }
+
+    pub fn list_items(&self) -> Result<Vec<NativeStorageItem>, NativeError> {
+        let engine = self.inner.lock().unwrap();
+        let items = engine.list_items().map_err(Into::into)?;
+        Ok(items.into_iter().map(|(k, v)| NativeStorageItem { key: k, value: v }).collect())
+    }
+
+    pub fn delete_item(&self, key: String) -> Result<bool, NativeError> {
+        let engine = self.inner.lock().unwrap();
+        engine.delete_item(&key).map_err(Into::into)
+    }
+}
+"#
+    } else {
+        ""
+    };
+
+    let storage_error_enum = if ctx.storage == "sqlite" {
+        r#"    StorageError { message: String },"#
+    } else {
+        ""
+    };
+
+    let storage_error_match = if ctx.storage == "sqlite" {
+        r#"            core::CoreError::StorageError(msg) => NativeError::StorageError { message: msg },"#
+    } else {
+        ""
+    };
+
     format!(
         r#"use std::sync::Mutex;
 use {slug}_core as core;
@@ -70,6 +135,7 @@ impl From<core::AppState> for NativeAppState {{
 pub enum NativeError {{
     NegativeValue,
     EmptyTitle,
+{storage_error_enum}
 }}
 
 impl From<core::CoreError> for NativeError {{
@@ -77,6 +143,7 @@ impl From<core::CoreError> for NativeError {{
         match err {{
             core::CoreError::NegativeValue => NativeError::NegativeValue,
             core::CoreError::EmptyTitle => NativeError::EmptyTitle,
+{storage_error_match}
         }}
     }}
 }}
@@ -115,12 +182,15 @@ impl AppEngine {{
         engine.update_title(&new_title).map(Into::into).map_err(Into::into)
     }}
 }}
-
+{sqlite_ffi}
 #[uniffi::export]
 pub fn native_greet(name: String) -> String {{
     core::greet(&name)
 }}
 "#,
-        slug = ctx.slug
+        slug = ctx.slug,
+        storage_error_enum = storage_error_enum,
+        storage_error_match = storage_error_match,
+        sqlite_ffi = sqlite_ffi
     )
 }

@@ -7,10 +7,11 @@ mod doctor;
 mod scaffold;
 mod templates;
 mod ui;
+pub mod upgrade;
 
 use anyhow::Result;
 use clap::Parser;
-use cli::{AddArgs, Cli, Commands, DevArgs, DoctorArgs, NewArgs};
+use cli::{AddArgs, Cli, Commands, DevArgs, DoctorArgs, NewArgs, UpgradeArgs};
 use colored::*;
 use config::JirauConfig;
 use doctor::DoctorEngine;
@@ -29,7 +30,7 @@ fn main() -> Result<()> {
         Some(Commands::Bindings(args)) => handle_bindings(args.platform),
         Some(Commands::Build(args)) => handle_build(args.platform, args.release),
         Some(Commands::Add(args)) => handle_add(args),
-        Some(Commands::Upgrade) => handle_upgrade(),
+        Some(Commands::Upgrade(args)) => upgrade::run_upgrade(&args),
         None => handle_interactive_menu(),
     }
 }
@@ -116,14 +117,68 @@ fn handle_new(args: NewArgs) -> Result<()> {
         }
     }
 
+    // Persistência local (SQLite / InMemory)
+    let storage = match args.storage {
+        Some(s) => s.to_lowercase(),
+        None if args.sqlite => "sqlite".to_string(),
+        None if args.non_interactive => "none".to_string(),
+        None => {
+            let options = vec![
+                "Nenhuma (Estado puramente em memória)",
+                "SQLite embutido (rusqlite no core Rust)",
+            ];
+            let choice = inquire::Select::new("Camada de persistência local:", options)
+                .with_help_message("Escolha a camada de armazenamento de dados no core Rust")
+                .prompt()?;
+            if choice.contains("SQLite") {
+                "sqlite".to_string()
+            } else {
+                "none".to_string()
+            }
+        }
+    };
+
+    // Sistema de build Android (Gradle / Amper)
+    let android_build_system = match args.android_build_system {
+        Some(s) => s.to_lowercase(),
+        None if args.amper => "amper".to_string(),
+        None if args.non_interactive => "gradle".to_string(),
+        None if platforms.contains(&"android".to_string()) => {
+            let options = vec![
+                "Gradle (Padrão do ecossistema Android com Kotlin DSL)",
+                "Amper (Configuração declarativa moderna da JetBrains)",
+            ];
+            let choice = inquire::Select::new("Sistema de build Android:", options)
+                .with_help_message("Escolha entre o Gradle tradicional ou o JetBrains Amper")
+                .prompt()?;
+            if choice.contains("Amper") {
+                "amper".to_string()
+            } else {
+                "gradle".to_string()
+            }
+        }
+        None => "gradle".to_string(),
+    };
+
     println!();
     ui::print_step("Configuração do projeto:");
     ui::print_substep(&format!("Nome: {}", name.cyan().bold()));
     ui::print_substep(&format!("Package ID: {}", package_id.cyan()));
     ui::print_substep(&format!("Plataformas: {}", platforms.join(", ").cyan()));
+    ui::print_substep(&format!("Persistência: {}", storage.cyan()));
+    if platforms.contains(&"android".to_string()) {
+        ui::print_substep(&format!("Build Android: {}", android_build_system.cyan()));
+    }
     println!();
 
-    let ctx = TemplateContext::new(&name, &package_id, platforms.clone());
+    let ctx = TemplateContext::with_options(
+        &name,
+        &package_id,
+        platforms.clone(),
+        &storage,
+        &android_build_system,
+        upgrade::CURRENT_TEMPLATE_VERSION,
+    );
     let current_dir = env::current_dir()?;
     Scaffolder::create_project(&ctx, &current_dir)?;
 
@@ -260,10 +315,13 @@ fn handle_add(args: AddArgs) -> Result<()> {
         return Ok(());
     }
 
-    let ctx = TemplateContext::new(
+    let ctx = TemplateContext::with_options(
         &config.app.name,
         &config.app.package_id,
         vec![platform.clone()],
+        &config.app.storage,
+        &config.app.android_build_system,
+        &config.meta.template_version,
     );
     let spinner = ui::create_spinner("Configurando nova plataforma...");
 
@@ -295,14 +353,9 @@ fn handle_add(args: AddArgs) -> Result<()> {
             }
         }
         "android" => {
-            let dummy_ctx = TemplateContext::new(
-                &config.app.name,
-                &config.app.package_id,
-                vec!["android".to_string()],
-            );
             let android_dir = root_dir.join("android");
             let app_dir = android_dir.join("app");
-            let pkg_src_dir = app_dir.join("src/main/java").join(&dummy_ctx.package_path);
+            let pkg_src_dir = app_dir.join("src/main/java").join(&ctx.package_path);
             let jni_libs_dir = app_dir.join("src/main/jniLibs");
             let gradle_toml_dir = android_dir.join("gradle");
 
@@ -312,7 +365,7 @@ fn handle_add(args: AddArgs) -> Result<()> {
 
             std::fs::write(
                 android_dir.join("settings.gradle.kts"),
-                templates::android::settings_gradle_kts(&dummy_ctx),
+                templates::android::settings_gradle_kts(&ctx),
             )?;
             std::fs::write(
                 android_dir.join("gradle.properties"),
@@ -328,23 +381,39 @@ fn handle_add(args: AddArgs) -> Result<()> {
             )?;
             std::fs::write(
                 app_dir.join("build.gradle.kts"),
-                templates::android::app_build_gradle_kts(&dummy_ctx),
+                templates::android::app_build_gradle_kts(&ctx),
             )?;
             std::fs::write(
                 app_dir.join("src/main/AndroidManifest.xml"),
-                templates::android::app_android_manifest_xml(&dummy_ctx),
+                templates::android::app_android_manifest_xml(&ctx),
             )?;
             std::fs::write(
                 pkg_src_dir.join("MainActivity.kt"),
-                templates::android::app_main_activity_kt(&dummy_ctx),
+                templates::android::app_main_activity_kt(&ctx),
             )?;
+
+            if config.app.android_build_system == "amper" {
+                std::fs::write(
+                    android_dir.join("module.yaml"),
+                    templates::android::amper_module_yaml(&ctx),
+                )?;
+                std::fs::write(
+                    android_dir.join("project.yaml"),
+                    templates::android::amper_project_yaml(),
+                )?;
+                let amper_script = android_dir.join("amper");
+                std::fs::write(&amper_script, templates::android::amper_wrapper_sh())?;
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    let _ = std::fs::set_permissions(
+                        &amper_script,
+                        std::fs::Permissions::from_mode(0o755),
+                    );
+                }
+            }
         }
         "ios" => {
-            let dummy_ctx = TemplateContext::new(
-                &config.app.name,
-                &config.app.package_id,
-                vec!["ios".to_string()],
-            );
             let ios_dir = root_dir.join("ios");
             let sources_dir = ios_dir.join("App/Sources");
             let gen_dir = ios_dir.join("Generated");
@@ -354,15 +423,15 @@ fn handle_add(args: AddArgs) -> Result<()> {
 
             std::fs::write(
                 ios_dir.join("project.yml"),
-                templates::ios::project_yml(&dummy_ctx),
+                templates::ios::project_yml(&ctx),
             )?;
             std::fs::write(
                 sources_dir.join("ContentView.swift"),
-                templates::ios::content_view_swift(&dummy_ctx),
+                templates::ios::content_view_swift(&ctx),
             )?;
             std::fs::write(
-                sources_dir.join(format!("{}App.swift", dummy_ctx.pascal_name)),
-                templates::ios::app_swift(&dummy_ctx),
+                sources_dir.join(format!("{}App.swift", ctx.pascal_name)),
+                templates::ios::app_swift(&ctx),
             )?;
         }
         other => anyhow::bail!(
@@ -388,24 +457,6 @@ fn handle_add(args: AddArgs) -> Result<()> {
     Ok(())
 }
 
-fn handle_upgrade() -> Result<()> {
-    ui::print_banner();
-    let (root_dir, config) = JirauConfig::find_in_current_or_parent()?;
-    ui::print_step(&format!("Projeto: {}", config.app.name.bold()));
-    ui::print_substep(&format!("Localização: {}", root_dir.display()));
-    ui::print_substep(&format!(
-        "Versão do Template: {}",
-        config.meta.template_version.cyan()
-    ));
-    ui::print_substep(&format!(
-        "Versão da CLI jirau: {}",
-        env!("CARGO_PKG_VERSION").green().bold()
-    ));
-
-    ui::print_success("A estrutura do projeto está alinhada com a versão atual da CLI.");
-    Ok(())
-}
-
 fn handle_interactive_menu() -> Result<()> {
     ui::print_banner();
 
@@ -416,6 +467,7 @@ fn handle_interactive_menu() -> Result<()> {
         "🚀  Iniciar ciclo de desenvolvimento (dev)",
         "🔗  Regerar bindings UniFFI (bindings)",
         "📦  Compilar binários para release (build)",
+        "🔄  Sincronizar template via 3-way merge (upgrade)",
         "🚪  Sair",
     ];
 
@@ -432,6 +484,10 @@ fn handle_interactive_menu() -> Result<()> {
                     android: false,
                     ios: false,
                     desktop: false,
+                    storage: None,
+                    sqlite: false,
+                    android_build_system: None,
+                    amper: false,
                     non_interactive: false,
                 })
             } else if selected.contains("Adicionar plataforma") {
@@ -450,6 +506,8 @@ fn handle_interactive_menu() -> Result<()> {
                 handle_bindings(None)
             } else if selected.contains("Compilar binários") {
                 handle_build(None, true)
+            } else if selected.contains("Sincronizar template") {
+                upgrade::run_upgrade(&UpgradeArgs::default())
             } else {
                 println!("Até logo!");
                 Ok(())

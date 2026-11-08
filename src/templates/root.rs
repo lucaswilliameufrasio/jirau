@@ -117,6 +117,8 @@ name = "{name}"
 package_id = "{package_id}"
 version = "0.1.0"
 platforms = [{platforms}]
+storage = "{storage}"
+android_build_system = "{android_build_system}"
 
 [dev]
 default_android_abi = "arm64-v8a"
@@ -124,10 +126,13 @@ default_ios_simulator = "iPhone 16"
 use_sccache = true
 
 [meta]
-template_version = "0.1.0"
+template_version = "{template_version}"
 "#,
         name = ctx.name,
         package_id = ctx.package_id,
-        platforms = platforms_str
+        platforms = platforms_str,
+        storage = ctx.storage,
+        android_build_system = ctx.android_build_system,
+        template_version = ctx.template_version
     )
 }
