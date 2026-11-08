@@ -52,27 +52,32 @@ Ao executar `jirau new meu-app`, um workspace Cargo modular é criado com os app
 meu-app/
 ├── Cargo.toml               # Workspace Cargo unificado
 ├── crates/
-│   ├── meu-app-core/        # Lógica de negócio pura (sem FFI, testes ultra-rápidos)
+│   ├── meu-app-core/        # Lógica de negócio pura (sem FFI, SQLite opcional com rusqlite)
 │   ├── meu-app-ffi/         # Definições e proc-macros do Mozilla UniFFI (mobile)
 │   └── meu-app-desktop/     # (Opcional) App Desktop em Rust puro com Rune UI
 ├── android/                 # (Opcional) Projeto Android nativo Jetpack Compose
 │   ├── settings.gradle.kts
 │   ├── gradle.properties    # Otimizado com configuration-cache e paralelo
 │   ├── gradle/libs.versions.toml
+│   ├── module.yaml          # (Opcional) Configuração declarativa JetBrains Amper
+│   ├── project.yaml         # (Opcional) Catálogo de módulos Amper
 │   └── app/                 # UI em Jetpack Compose, ViewModels e StateFlow
 ├── ios/                     # (Opcional) Projeto iOS nativo SwiftUI
 │   ├── project.yml          # XcodeGen (declarativo, livre de conflitos no .pbxproj)
 │   └── App/                 # UI em SwiftUI com NavigationStack e @Observable
-├── jirau.toml               # Metadados do app (nome, bundle id, plataformas ativas)
+├── jirau.toml               # Metadados do app (nome, bundle id, plataformas, persistência e build)
 └── TESTING_STANDARD.md      # Padrões e diretrizes de testes do ecossistema
 ```
 
 ### Princípios da arquitetura:
 1. **Separação estrita entre `core` e consumidores:** O `core` contém apenas as regras de negócio em Rust puro. O app desktop consome o `core` diretamente; as plataformas móveis consomem via `ffi`.
 2. **Desktop em Rust puro:** A crate `crates/<slug>-desktop` usa o framework [Rune](https://github.com/anomalyco/rune), aproveitando a GPU com renderização moderna e reatividade de alta performance.
-3. **Artefatos gerados fora do versionamento:** Bindings de Kotlin (`build/generated/uniffi`) e Swift (`ios/Generated/`) são gerados automaticamente.
-4. **Bibliotecas Nativas Mobile:** Gera `.so` distribuídos por ABI em `jniLibs/` no Android e um `XCFramework` unificado (Device + Simulador) no iOS.
-5. **XcodeGen:** O projeto iOS é configurado via `project.yml`, permitindo inspecionar e gerar a estrutura até mesmo a partir do Linux.
+3. **Persistência local transparente:** Suporte opcional a SQLite embutido via `rusqlite` (`--sqlite`), com `StorageEngine` no core Rust e bindings nativos imediatos para Kotlin e Swift.
+4. **Build Android flexível:** Suporte tanto ao tradicional **Gradle (Kotlin DSL)** com caches agressivos quanto ao moderno **JetBrains Amper** declarativo (`--amper`).
+5. **Artefatos gerados fora do versionamento:** Bindings de Kotlin (`build/generated/uniffi`) e Swift (`ios/Generated/`) são gerados automaticamente.
+6. **Bibliotecas Nativas Mobile:** Gera `.so` distribuídos por ABI em `jniLibs/` no Android e um `XCFramework` unificado (Device + Simulador) no iOS.
+7. **XcodeGen:** O projeto iOS é configurado via `project.yml`, permitindo inspecionar e gerar a estrutura até mesmo a partir do Linux.
+8. **Evolução contínua sem quebras:** O comando `jirau upgrade` sincroniza as novidades do template entre versões usando algoritmo de 3-way merge, preservando intacto todo o código customizado pelo desenvolvedor.
 
 ---
 
