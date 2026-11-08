@@ -26,16 +26,23 @@ fn test_generated_project_cargo_test() {
     assert!(app_dir.join("Cargo.toml").exists());
     assert!(app_dir.join("jirau.toml").exists());
 
-    // Test the generated core directly with cargo test inside the core crate
+    // Test the generated core directly with cargo test inside the core crate.
+    // Try standard cargo test first (which works online in CI); fall back to --offline for local sandbox.
     let core_dir = app_dir.join("crates/test-app-core");
-    let test_status = Command::new("cargo")
+    let status = Command::new("cargo")
         .current_dir(&core_dir)
-        .args(["test", "--offline"])
-        .status()
-        .expect("Falha ao rodar cargo test na crate core do projeto gerado");
+        .arg("test")
+        .status();
 
-    assert!(
-        test_status.success(),
-        "cargo test na crate core gerada deve passar"
-    );
+    let success = match status {
+        Ok(s) if s.success() => true,
+        _ => Command::new("cargo")
+            .current_dir(&core_dir)
+            .args(["test", "--offline"])
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false),
+    };
+
+    assert!(success, "cargo test na crate core gerada deve passar");
 }
