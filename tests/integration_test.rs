@@ -199,7 +199,7 @@ fn test_upgrade_three_way_merge() {
     let config_path = app_dir.join("jirau.toml");
     let config_content = std::fs::read_to_string(&config_path).unwrap();
     let old_config = config_content.replace(
-        "template_version = \"0.2.0\"",
+        "template_version = \"0.3.0\"",
         "template_version = \"0.1.0\"",
     );
     std::fs::write(&config_path, old_config).unwrap();
@@ -221,11 +221,74 @@ fn test_upgrade_three_way_merge() {
         .expect("Falha ao invocar jirau upgrade");
     assert!(status.success(), "jirau upgrade deve ter sucesso");
 
-    // 5. Verify template_version was bumped to 0.2.0
+    // 5. Verify template_version was bumped to 0.3.0
     let updated_config = std::fs::read_to_string(&config_path).unwrap();
-    assert!(updated_config.contains("template_version = \"0.2.0\""));
+    assert!(updated_config.contains("template_version = \"0.3.0\""));
 
     // 6. Verify user's custom line was preserved
     let updated_md = std::fs::read_to_string(&testing_md).unwrap();
     assert!(updated_md.contains("Linha customizada pelo desenvolvedor"));
+}
+
+#[test]
+fn test_ui_theme_and_ffi_lifecycle_tests() {
+    let temp = tempdir().unwrap();
+    let jirau_bin = env!("CARGO_BIN_EXE_jirau");
+
+    let status = Command::new(jirau_bin)
+        .current_dir(temp.path())
+        .args([
+            "new",
+            "themed-app",
+            "--package",
+            "com.test.themed",
+            "--android",
+            "--ios",
+            "--theme",
+            "material3-extended",
+            "--plugin",
+            "logger",
+            "--non-interactive",
+        ])
+        .status()
+        .expect("Falha ao invocar jirau new");
+
+    assert!(
+        status.success(),
+        "jirau new com tema e plugin deve ter sucesso"
+    );
+
+    let app_dir = temp.path().join("themed-app");
+
+    // Android theme & lifecycle test files
+    assert!(app_dir
+        .join("android/app/src/main/java/com/test/themed/ui/theme/Color.kt")
+        .exists());
+    assert!(app_dir
+        .join("android/app/src/main/java/com/test/themed/ui/theme/Theme.kt")
+        .exists());
+    assert!(app_dir
+        .join("android/app/src/main/java/com/test/themed/ui/theme/Type.kt")
+        .exists());
+    assert!(app_dir
+        .join("android/app/src/androidTest/java/com/test/themed/NativeLifecycleTest.kt")
+        .exists());
+
+    // iOS theme & lifecycle test files
+    assert!(app_dir.join("ios/App/Sources/Theme.swift").exists());
+    assert!(app_dir
+        .join("ios/App/Tests/NativeLifecycleTests.swift")
+        .exists());
+
+    // UniFFI Lifecycle Integration Test
+    let ffi_test = app_dir.join("crates/themed-app-ffi/tests/lifecycle_integration_tests.rs");
+    assert!(ffi_test.exists());
+    let ffi_test_code = std::fs::read_to_string(&ffi_test).unwrap();
+    assert!(ffi_test_code.contains("test_native_app_lifecycle_and_state_flow"));
+    assert!(ffi_test_code.contains("AppEngine::new()"));
+
+    // Configuration check
+    let jirau_toml = std::fs::read_to_string(app_dir.join("jirau.toml")).unwrap();
+    assert!(jirau_toml.contains("ui_theme = \"material3-extended\""));
+    assert!(jirau_toml.contains("plugins = [\"logger\"]"));
 }

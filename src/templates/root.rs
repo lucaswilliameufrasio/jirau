@@ -111,6 +111,13 @@ pub fn jirau_toml(ctx: &TemplateContext) -> String {
         .collect::<Vec<_>>()
         .join(", ");
 
+    let plugins_str = ctx
+        .plugins
+        .iter()
+        .map(|p| format!("\"{}\"", p))
+        .collect::<Vec<_>>()
+        .join(", ");
+
     format!(
         r#"[app]
 name = "{name}"
@@ -119,6 +126,8 @@ version = "0.1.0"
 platforms = [{platforms}]
 storage = "{storage}"
 android_build_system = "{android_build_system}"
+ui_theme = "{ui_theme}"
+plugins = [{plugins}]
 
 [dev]
 default_android_abi = "arm64-v8a"
@@ -133,6 +142,8 @@ template_version = "{template_version}"
         platforms = platforms_str,
         storage = ctx.storage,
         android_build_system = ctx.android_build_system,
+        ui_theme = ctx.ui_theme,
+        plugins = plugins_str,
         template_version = ctx.template_version
     )
 }

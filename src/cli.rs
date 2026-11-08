@@ -91,6 +91,14 @@ pub struct NewArgs {
     #[arg(long)]
     pub amper: bool,
 
+    /// Tema de UI inicial (default, material3-extended, minimal)
+    #[arg(long)]
+    pub theme: Option<String>,
+
+    /// Plugins opcionais de arquitetura (ex: --plugin logger)
+    #[arg(long)]
+    pub plugin: Vec<String>,
+
     /// Não pergunta nada de forma interativa (usa padrões para valores ausentes)
     #[arg(long)]
     pub non_interactive: bool,

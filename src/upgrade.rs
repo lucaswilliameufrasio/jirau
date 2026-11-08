@@ -11,7 +11,7 @@ use std::process::Command;
 use tempfile::tempdir;
 use walkdir::WalkDir;
 
-pub const CURRENT_TEMPLATE_VERSION: &str = "0.2.0";
+pub const CURRENT_TEMPLATE_VERSION: &str = "0.3.0";
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum MergeResult {
@@ -61,21 +61,25 @@ pub fn run_upgrade(args: &UpgradeArgs) -> Result<()> {
     let temp_base = tempdir()?;
     let temp_target = tempdir()?;
 
-    let base_ctx = TemplateContext::with_options(
+    let base_ctx = TemplateContext::with_all_options(
         &config.app.name,
         &config.app.package_id,
         config.app.platforms.clone(),
         &config.app.storage,
         &config.app.android_build_system,
+        &config.app.ui_theme,
+        config.app.plugins.clone(),
         &prev_version,
     );
 
-    let target_ctx = TemplateContext::with_options(
+    let target_ctx = TemplateContext::with_all_options(
         &config.app.name,
         &config.app.package_id,
         config.app.platforms.clone(),
         &config.app.storage,
         &config.app.android_build_system,
+        &config.app.ui_theme,
+        config.app.plugins.clone(),
         CURRENT_TEMPLATE_VERSION,
     );
 

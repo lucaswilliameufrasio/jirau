@@ -1,0 +1,27 @@
+# Rust
+target/
+**/*.rs.bk
+*.swp
+
+# Android
+android/.gradle/
+android/build/
+android/*/build/
+android/local.properties
+android/.idea/
+android/*.iml
+android/*/*.iml
+android/.cxx/
+android/app/build/generated/uniffi/
+android/app/src/main/jniLibs/
+
+# iOS
+ios/.build/
+ios/DerivedData/
+ios/*.xcodeproj/
+ios/Generated/
+ios/Frameworks/
+
+# OS
+.DS_Store
+Thumbs.db

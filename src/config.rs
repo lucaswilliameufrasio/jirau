@@ -25,6 +25,10 @@ pub struct AppConfig {
     pub storage: String,
     #[serde(default = "default_android_build_system")]
     pub android_build_system: String,
+    #[serde(default = "default_ui_theme")]
+    pub ui_theme: String,
+    #[serde(default = "default_plugins")]
+    pub plugins: Vec<String>,
 }
 
 fn default_platforms() -> Vec<String> {
@@ -41,6 +45,14 @@ fn default_storage() -> String {
 
 fn default_android_build_system() -> String {
     "gradle".to_string()
+}
+
+fn default_ui_theme() -> String {
+    "default".to_string()
+}
+
+fn default_plugins() -> Vec<String> {
+    Vec::new()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -82,7 +94,7 @@ pub struct MetaConfig {
 }
 
 fn default_template_version() -> String {
-    "0.2.0".to_string()
+    "0.3.0".to_string()
 }
 
 impl Default for MetaConfig {
@@ -110,6 +122,8 @@ impl JirauConfig {
                 platforms,
                 storage: storage.to_string(),
                 android_build_system: android_build_system.to_string(),
+                ui_theme: "default".to_string(),
+                plugins: Vec::new(),
             },
             dev: DevConfig::default(),
             meta: MetaConfig::default(),
@@ -174,7 +188,8 @@ mod tests {
         assert_eq!(parsed.app.platforms, vec!["android", "ios", "desktop"]);
         assert_eq!(parsed.app.storage, "sqlite");
         assert_eq!(parsed.app.android_build_system, "amper");
+        assert_eq!(parsed.app.ui_theme, "default");
         assert_eq!(parsed.dev.default_android_abi, "arm64-v8a");
-        assert_eq!(parsed.meta.template_version, "0.2.0");
+        assert_eq!(parsed.meta.template_version, "0.3.0");
     }
 }

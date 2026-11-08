@@ -160,6 +160,30 @@ fn handle_new(args: NewArgs) -> Result<()> {
         None => "gradle".to_string(),
     };
 
+    // Tema de UI
+    let ui_theme = match args.theme {
+        Some(t) => t.to_lowercase(),
+        None if args.non_interactive => "default".to_string(),
+        None => {
+            let options = vec![
+                "Padrão (Nativo puro com Material 3 / Human Interface)",
+                "Material 3 Estendido (Paleta customizável, Dark Mode e Tokens)",
+                "Minimalista (Tipografia e layout enxuto)",
+            ];
+            let choice = inquire::Select::new("Tema visual e kit de design:", options)
+                .with_help_message("Escolha a base visual das interfaces mobile e desktop")
+                .prompt()?;
+            if choice.contains("Material 3 Estendido") {
+                "material3-extended".to_string()
+            } else if choice.contains("Minimalista") {
+                "minimal".to_string()
+            } else {
+                "default".to_string()
+            }
+        }
+    };
+    let plugins = args.plugin;
+
     println!();
     ui::print_step("Configuração do projeto:");
     ui::print_substep(&format!("Nome: {}", name.cyan().bold()));
@@ -169,14 +193,20 @@ fn handle_new(args: NewArgs) -> Result<()> {
     if platforms.contains(&"android".to_string()) {
         ui::print_substep(&format!("Build Android: {}", android_build_system.cyan()));
     }
+    ui::print_substep(&format!("Tema de UI: {}", ui_theme.cyan()));
+    if !plugins.is_empty() {
+        ui::print_substep(&format!("Plugins: {}", plugins.join(", ").cyan()));
+    }
     println!();
 
-    let ctx = TemplateContext::with_options(
+    let ctx = TemplateContext::with_all_options(
         &name,
         &package_id,
         platforms.clone(),
         &storage,
         &android_build_system,
+        &ui_theme,
+        plugins,
         upgrade::CURRENT_TEMPLATE_VERSION,
     );
     let current_dir = env::current_dir()?;
@@ -488,6 +518,8 @@ fn handle_interactive_menu() -> Result<()> {
                     sqlite: false,
                     android_build_system: None,
                     amper: false,
+                    theme: None,
+                    plugin: Vec::new(),
                     non_interactive: false,
                 })
             } else if selected.contains("Adicionar plataforma") {

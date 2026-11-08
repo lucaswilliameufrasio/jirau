@@ -1,0 +1,14 @@
+[workspace]
+members = [
+    "crates/mobile-gradle-starter-core",
+    "crates/mobile-gradle-starter-ffi",
+]
+resolver = "2"
+
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+strip = true

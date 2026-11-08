@@ -48,20 +48,29 @@ impl Scaffolder {
         // 3. crates/<slug>-ffi
         let ffi_dir = project_dir.join("crates").join(format!("{}-ffi", ctx.slug));
         fs::create_dir_all(ffi_dir.join("src"))?;
+        fs::create_dir_all(ffi_dir.join("tests"))?;
         fs::write(ffi_dir.join("Cargo.toml"), rust_ffi::ffi_cargo_toml(ctx))?;
         fs::write(ffi_dir.join("build.rs"), rust_ffi::ffi_build_rs())?;
         fs::write(ffi_dir.join("uniffi.toml"), rust_ffi::ffi_uniffi_toml(ctx))?;
         fs::write(ffi_dir.join("src/lib.rs"), rust_ffi::ffi_lib_rs(ctx))?;
+        fs::write(
+            ffi_dir.join("tests/lifecycle_integration_tests.rs"),
+            rust_ffi::ffi_lifecycle_test_rs(ctx),
+        )?;
 
         // 4. Android
         if ctx.platforms.contains(&"android".to_string()) {
             let android_dir = project_dir.join("android");
             let app_dir = android_dir.join("app");
             let pkg_src_dir = app_dir.join("src/main/java").join(&ctx.package_path);
+            let theme_dir = pkg_src_dir.join("ui/theme");
+            let test_src_dir = app_dir.join("src/androidTest/java").join(&ctx.package_path);
             let jni_libs_dir = app_dir.join("src/main/jniLibs");
             let gradle_toml_dir = android_dir.join("gradle");
 
             fs::create_dir_all(&pkg_src_dir)?;
+            fs::create_dir_all(&theme_dir)?;
+            fs::create_dir_all(&test_src_dir)?;
             fs::create_dir_all(&jni_libs_dir)?;
             fs::create_dir_all(&gradle_toml_dir)?;
 
@@ -94,6 +103,13 @@ impl Scaffolder {
                 pkg_src_dir.join("MainActivity.kt"),
                 android::app_main_activity_kt(ctx),
             )?;
+            fs::write(theme_dir.join("Color.kt"), android::theme_color_kt(ctx))?;
+            fs::write(theme_dir.join("Type.kt"), android::theme_type_kt(ctx))?;
+            fs::write(theme_dir.join("Theme.kt"), android::theme_theme_kt(ctx))?;
+            fs::write(
+                test_src_dir.join("NativeLifecycleTest.kt"),
+                android::android_lifecycle_test_kt(ctx),
+            )?;
             fs::write(jni_libs_dir.join(".gitkeep"), "")?;
 
             if ctx.android_build_system == "amper" {
@@ -119,9 +135,11 @@ impl Scaffolder {
         if ctx.platforms.contains(&"ios".to_string()) {
             let ios_dir = project_dir.join("ios");
             let sources_dir = ios_dir.join("App/Sources");
+            let tests_dir = ios_dir.join("App/Tests");
             let gen_dir = ios_dir.join("Generated");
 
             fs::create_dir_all(&sources_dir)?;
+            fs::create_dir_all(&tests_dir)?;
             fs::create_dir_all(&gen_dir)?;
 
             fs::write(ios_dir.join("project.yml"), ios::project_yml(ctx))?;
@@ -132,6 +150,11 @@ impl Scaffolder {
             fs::write(
                 sources_dir.join(format!("{}App.swift", ctx.pascal_name)),
                 ios::app_swift(ctx),
+            )?;
+            fs::write(sources_dir.join("Theme.swift"), ios::theme_swift())?;
+            fs::write(
+                tests_dir.join("NativeLifecycleTests.swift"),
+                ios::lifecycle_tests_swift(ctx),
             )?;
             fs::write(gen_dir.join(".gitkeep"), "")?;
         }
@@ -194,6 +217,9 @@ mod tests {
         assert!(root.join("crates/acari-app-ffi/uniffi.toml").exists());
         assert!(root.join("crates/acari-app-ffi/build.rs").exists());
         assert!(root.join("crates/acari-app-ffi/src/lib.rs").exists());
+        assert!(root
+            .join("crates/acari-app-ffi/tests/lifecycle_integration_tests.rs")
+            .exists());
         assert!(root.join("crates/acari-app-desktop/Cargo.toml").exists());
         assert!(root.join("crates/acari-app-desktop/src/main.rs").exists());
 
@@ -208,11 +234,21 @@ mod tests {
         assert!(root
             .join("android/app/src/main/java/com/lucas/acari/MainActivity.kt")
             .exists());
+        assert!(root
+            .join("android/app/src/main/java/com/lucas/acari/ui/theme/Theme.kt")
+            .exists());
+        assert!(root
+            .join("android/app/src/androidTest/java/com/lucas/acari/NativeLifecycleTest.kt")
+            .exists());
 
         // iOS
         assert!(root.join("ios/project.yml").exists());
         assert!(root.join("ios/App/Sources/ContentView.swift").exists());
         assert!(root.join("ios/App/Sources/AcariAppApp.swift").exists());
+        assert!(root.join("ios/App/Sources/Theme.swift").exists());
+        assert!(root
+            .join("ios/App/Tests/NativeLifecycleTests.swift")
+            .exists());
 
         // Duplicate protection
         assert!(Scaffolder::create_project(&ctx, temp.path()).is_err());

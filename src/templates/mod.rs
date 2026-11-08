@@ -15,13 +15,15 @@ pub struct TemplateContext {
     pub platforms: Vec<String>,       // ["android", "ios", "desktop"]
     pub storage: String,              // "none" | "sqlite"
     pub android_build_system: String, // "gradle" | "amper"
-    pub template_version: String,     // "0.2.0"
+    pub ui_theme: String,             // "default" | "material3-extended" | "minimal"
+    pub plugins: Vec<String>,         // ["logger", "analytics"]
+    pub template_version: String,     // "0.3.0"
 }
 
 impl TemplateContext {
     #[allow(dead_code)]
     pub fn new(name: &str, package_id: &str, platforms: Vec<String>) -> Self {
-        Self::with_options(name, package_id, platforms, "none", "gradle", "0.2.0")
+        Self::with_options(name, package_id, platforms, "none", "gradle", "0.3.0")
     }
 
     pub fn with_options(
@@ -30,6 +32,29 @@ impl TemplateContext {
         platforms: Vec<String>,
         storage: &str,
         android_build_system: &str,
+        template_version: &str,
+    ) -> Self {
+        Self::with_all_options(
+            name,
+            package_id,
+            platforms,
+            storage,
+            android_build_system,
+            "default",
+            Vec::new(),
+            template_version,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn with_all_options(
+        name: &str,
+        package_id: &str,
+        platforms: Vec<String>,
+        storage: &str,
+        android_build_system: &str,
+        ui_theme: &str,
+        plugins: Vec<String>,
         template_version: &str,
     ) -> Self {
         let slug = name.to_lowercase().replace(['_', ' '], "-");
@@ -59,6 +84,8 @@ impl TemplateContext {
             platforms,
             storage: storage.to_string(),
             android_build_system: android_build_system.to_string(),
+            ui_theme: ui_theme.to_string(),
+            plugins,
             template_version: template_version.to_string(),
         }
     }

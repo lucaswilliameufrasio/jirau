@@ -1,0 +1,5 @@
+[bindings.kotlin]
+package_name = "com.example.mobile.uniffi"
+
+[bindings.swift]
+module_name = "MobileGradleStarterFFI"

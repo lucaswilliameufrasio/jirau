@@ -13,7 +13,7 @@
 [![UniFFI](https://img.shields.io/badge/FFI-Mozilla%20UniFFI-purple.svg)](https://mozilla.github.io/uniffi-rs/)
 [![Release](https://img.shields.io/github/v/release/lucaswilliameufrasio/jirau?color=blue&logo=github)](https://github.com/lucaswilliameufrasio/jirau/releases/latest)
 [![CI](https://img.shields.io/github/actions/workflow/status/lucaswilliameufrasio/jirau/ci.yml?branch=main&label=CI&logo=githubactions)](https://github.com/lucaswilliameufrasio/jirau/actions/workflows/ci.yml)
-[![Status](https://img.shields.io/badge/status-v0.2.0%20ativo-success.svg)](#roadmap)
+[![Status](https://img.shields.io/badge/status-v0.3.0%20ativo-success.svg)](#roadmap)
 
 </div>
 
@@ -140,6 +140,18 @@ O `jirau doctor` diagnostica e ajuda a instalar os itens necessários:
 
 ---
 
+## 🌟 Projetos de Exemplo
+
+O repositório inclui uma pasta [`examples/`](examples/) com projetos gerados diretamente via CLI para demonstrar cada combinação de ambiente:
+
+- **[`all-platforms-showcase`](examples/all-platforms-showcase/)**: App com **todas as plataformas ativas** (Android Jetpack Compose + iOS SwiftUI + Desktop Rune UI), persistência SQLite embutida (`rusqlite`), JetBrains Amper declarativo, kit de design Material 3 e testes de ciclo de vida FFI.
+- **[`mobile-gradle-starter`](examples/mobile-gradle-starter/)**: Arquitetura mobile pura (Android + iOS) usando Gradle (Kotlin DSL) padrão e estado em memória reativo.
+- **[`desktop-first-sqlite`](examples/desktop-first-sqlite/)**: Aplicativo Desktop nativo em Rust consumindo diretamente o `StorageEngine` SQLite sem ponte de FFI.
+
+Consulte o [`examples/README.md`](examples/README.md) para instruções detalhadas de como executá-los.
+
+---
+
 ## 🗺️ Roadmap de Desenvolvimento
 
 - [x] **Fase 0: Concepção & Arquitetura** ([`docs/development-plan.md`](docs/development-plan.md))
@@ -149,15 +161,8 @@ O `jirau doctor` diagnostica e ajuda a instalar os itens necessários:
 - [x] **Fase 4: Suporte iOS (`dev`, `bindings` & `build`)** (integração com XcodeGen declarativo, XCFramework e simuladores)
 - [x] **Fase 5: Dogfooding & Suíte de Testes** (testes unitários e teste de integração ponta a ponta gerando apps temporários e validando `cargo test`)
 - [x] **Fase 6: Automação de Release & Distribuição** (pipeline `cargo-dist`, changelog automático via `git-cliff`, binários para Linux, macOS e Windows na v0.1.0)
-
-### Próximos Passos (v0.2+)
-- [x] **TUI expandida para seleção de persistência:** SQLite embutido via `rusqlite` diretamente no core Rust (`--sqlite`, com suporte a in-memory e arquivos locais).
-- [x] **Suporte opcional a Amper para projetos Android além do Gradle:** especificações declarativas com `module.yaml`, `project.yaml` e wrapper executável (`--amper`).
-- [x] **Comando `jirau upgrade` com merge de templates de três vias:** sincronização automática de templates preservando edições manuais (`jirau upgrade [--force] [--dry-run]`).
-
-### Futuro (v0.3+)
-- [ ] Suporte opcional a plugins e temas customizados de UI para Compose e SwiftUI.
-- [ ] Geração automática de testes de integração FFI end-to-end simulando ciclo de vida nativo.
+- [x] **Fase 7: Persistência & Amper (v0.2.0)** (SQLite embutido no core via `rusqlite`, suporte declarativo ao JetBrains Amper e comando `jirau upgrade` com 3-way merge)
+- [x] **Fase 8: Temas, Plugins & Testes FFI End-to-End (v0.3.0)** (tokens de design para Compose/SwiftUI, suíte de testes de lifecycle nativo multithread no host e vitrine de exemplos em `examples/`)
 
 ---
 
