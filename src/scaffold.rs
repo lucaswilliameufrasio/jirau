@@ -31,6 +31,7 @@ impl Scaffolder {
 
         fs::write(project_dir.join("Cargo.toml"), root::root_cargo_toml(ctx))?;
         fs::write(project_dir.join(".gitignore"), root::root_gitignore())?;
+        fs::write(project_dir.join(".mise.toml"), root::root_mise_toml())?;
         fs::write(
             project_dir.join("TESTING_STANDARD.md"),
             root::testing_standard_md(ctx),
@@ -207,6 +208,7 @@ mod tests {
         let root = temp.path().join("acari-app");
         assert!(root.join("Cargo.toml").exists());
         assert!(root.join(".gitignore").exists());
+        assert!(root.join(".mise.toml").exists());
         assert!(root.join("TESTING_STANDARD.md").exists());
         assert!(root.join("jirau.toml").exists());
 

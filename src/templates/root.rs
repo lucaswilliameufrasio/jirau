@@ -66,6 +66,14 @@ Thumbs.db
     .to_string()
 }
 
+pub fn root_mise_toml() -> String {
+    r#"[tools]
+java = "21"
+rust = "1.99.1"
+"#
+    .to_string()
+}
+
 pub fn testing_standard_md(ctx: &TemplateContext) -> String {
     format!(
         r#"# Diretrizes de Testes — {name}

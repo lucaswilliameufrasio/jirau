@@ -25,6 +25,7 @@ fn test_generated_project_cargo_test() {
 
     let app_dir = temp.path().join("test-app");
     assert!(app_dir.join("Cargo.toml").exists());
+    assert!(app_dir.join(".mise.toml").exists());
     assert!(app_dir.join("jirau.toml").exists());
     assert!(app_dir.join("crates/test-app-core/Cargo.toml").exists());
     assert!(app_dir.join("crates/test-app-core/src/lib.rs").exists());
