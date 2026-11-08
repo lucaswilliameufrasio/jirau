@@ -10,7 +10,7 @@ mod ui;
 
 use anyhow::Result;
 use clap::Parser;
-use cli::{Cli, Commands, DevArgs, DoctorArgs, NewArgs};
+use cli::{AddArgs, Cli, Commands, DevArgs, DoctorArgs, NewArgs};
 use colored::*;
 use config::JirauConfig;
 use doctor::DoctorEngine;
@@ -28,6 +28,7 @@ fn main() -> Result<()> {
         Some(Commands::Dev(args)) => handle_dev(args),
         Some(Commands::Bindings(args)) => handle_bindings(args.platform),
         Some(Commands::Build(args)) => handle_build(args.platform, args.release),
+        Some(Commands::Add(args)) => handle_add(args),
         Some(Commands::Upgrade) => handle_upgrade(),
         None => handle_interactive_menu(),
     }
@@ -89,13 +90,20 @@ fn handle_new(args: NewArgs) -> Result<()> {
     if args.ios {
         platforms.push("ios".to_string());
     }
+    if args.desktop {
+        platforms.push("desktop".to_string());
+    }
 
     if platforms.is_empty() {
         if args.non_interactive {
-            platforms = vec!["android".to_string(), "ios".to_string()];
+            platforms = vec![
+                "android".to_string(),
+                "ios".to_string(),
+                "desktop".to_string(),
+            ];
         } else {
-            let options = vec!["android", "ios"];
-            let defaults = vec![0, 1];
+            let options = vec!["android", "ios", "desktop"];
+            let defaults = vec![0, 1, 2];
             let selected = inquire::MultiSelect::new("Plataformas suportadas:", options)
                 .with_default(&defaults)
                 .with_help_message("Pressione Espaço para marcar/desmarcar e Enter para confirmar")
@@ -141,6 +149,12 @@ fn handle_new(args: NewArgs) -> Result<()> {
         println!(
             "  {}        # Inicia o desenvolvimento iOS",
             "jirau dev ios".cyan()
+        );
+    }
+    if platforms.contains(&"desktop".to_string()) {
+        println!(
+            "  {}    # Inicia o app Desktop (Rune UI)",
+            "jirau dev desktop".cyan()
         );
     }
     println!(
@@ -223,6 +237,157 @@ fn handle_build(platform: Option<String>, release: bool) -> Result<()> {
     build::ReleaseBuilder::build(&root_dir, &config, platform, release)
 }
 
+fn handle_add(args: AddArgs) -> Result<()> {
+    ui::print_banner();
+    let (root_dir, mut config) = JirauConfig::find_in_current_or_parent()?;
+
+    let platform = match args.platform {
+        Some(p) => p.to_lowercase(),
+        None => {
+            let options = vec!["desktop", "android", "ios"];
+            inquire::Select::new("Qual plataforma deseja adicionar?", options)
+                .with_help_message("Escolha com as setas e pressione Enter")
+                .prompt()?
+                .to_string()
+        }
+    };
+
+    if config.app.platforms.contains(&platform) {
+        ui::print_warning(&format!(
+            "A plataforma '{}' já faz parte deste projeto.",
+            platform
+        ));
+        return Ok(());
+    }
+
+    let ctx = TemplateContext::new(
+        &config.app.name,
+        &config.app.package_id,
+        vec![platform.clone()],
+    );
+    let spinner = ui::create_spinner("Configurando nova plataforma...");
+
+    match platform.as_str() {
+        "desktop" => {
+            let desktop_dir = root_dir
+                .join("crates")
+                .join(format!("{}-desktop", ctx.slug));
+            std::fs::create_dir_all(desktop_dir.join("src"))?;
+            std::fs::write(
+                desktop_dir.join("Cargo.toml"),
+                templates::desktop::desktop_cargo_toml(&ctx),
+            )?;
+            std::fs::write(
+                desktop_dir.join("src/main.rs"),
+                templates::desktop::desktop_main_rs(&ctx),
+            )?;
+
+            // Atualiza workspace members no Cargo.toml raiz
+            let cargo_toml_path = root_dir.join("Cargo.toml");
+            let cargo_content = std::fs::read_to_string(&cargo_toml_path)?;
+            let desktop_member = format!("\"crates/{}-desktop\"", ctx.slug);
+            if !cargo_content.contains(&desktop_member) {
+                let updated = cargo_content.replace(
+                    "members = [",
+                    &format!("members = [\n    {},", desktop_member),
+                );
+                std::fs::write(&cargo_toml_path, updated)?;
+            }
+        }
+        "android" => {
+            let dummy_ctx = TemplateContext::new(
+                &config.app.name,
+                &config.app.package_id,
+                vec!["android".to_string()],
+            );
+            let android_dir = root_dir.join("android");
+            let app_dir = android_dir.join("app");
+            let pkg_src_dir = app_dir.join("src/main/java").join(&dummy_ctx.package_path);
+            let jni_libs_dir = app_dir.join("src/main/jniLibs");
+            let gradle_toml_dir = android_dir.join("gradle");
+
+            std::fs::create_dir_all(&pkg_src_dir)?;
+            std::fs::create_dir_all(&jni_libs_dir)?;
+            std::fs::create_dir_all(&gradle_toml_dir)?;
+
+            std::fs::write(
+                android_dir.join("settings.gradle.kts"),
+                templates::android::settings_gradle_kts(&dummy_ctx),
+            )?;
+            std::fs::write(
+                android_dir.join("gradle.properties"),
+                templates::android::gradle_properties(),
+            )?;
+            std::fs::write(
+                android_dir.join("build.gradle.kts"),
+                templates::android::root_build_gradle_kts(),
+            )?;
+            std::fs::write(
+                gradle_toml_dir.join("libs.versions.toml"),
+                templates::android::libs_versions_toml(),
+            )?;
+            std::fs::write(
+                app_dir.join("build.gradle.kts"),
+                templates::android::app_build_gradle_kts(&dummy_ctx),
+            )?;
+            std::fs::write(
+                app_dir.join("src/main/AndroidManifest.xml"),
+                templates::android::app_android_manifest_xml(&dummy_ctx),
+            )?;
+            std::fs::write(
+                pkg_src_dir.join("MainActivity.kt"),
+                templates::android::app_main_activity_kt(&dummy_ctx),
+            )?;
+        }
+        "ios" => {
+            let dummy_ctx = TemplateContext::new(
+                &config.app.name,
+                &config.app.package_id,
+                vec!["ios".to_string()],
+            );
+            let ios_dir = root_dir.join("ios");
+            let sources_dir = ios_dir.join("App/Sources");
+            let gen_dir = ios_dir.join("Generated");
+
+            std::fs::create_dir_all(&sources_dir)?;
+            std::fs::create_dir_all(&gen_dir)?;
+
+            std::fs::write(
+                ios_dir.join("project.yml"),
+                templates::ios::project_yml(&dummy_ctx),
+            )?;
+            std::fs::write(
+                sources_dir.join("ContentView.swift"),
+                templates::ios::content_view_swift(&dummy_ctx),
+            )?;
+            std::fs::write(
+                sources_dir.join(format!("{}App.swift", dummy_ctx.pascal_name)),
+                templates::ios::app_swift(&dummy_ctx),
+            )?;
+        }
+        other => anyhow::bail!(
+            "Plataforma '{}' não suportada. Use 'desktop', 'android' ou 'ios'.",
+            other
+        ),
+    }
+
+    config.app.platforms.push(platform.clone());
+    config.write_to_dir(&root_dir)?;
+
+    ui::finish_spinner_success(
+        &spinner,
+        &format!("Plataforma '{}' adicionada com sucesso!", platform),
+    );
+    println!();
+    ui::print_info(&format!(
+        "Execute 'jirau dev {}' para testar a nova plataforma.",
+        platform
+    ));
+    println!();
+
+    Ok(())
+}
+
 fn handle_upgrade() -> Result<()> {
     ui::print_banner();
     let (root_dir, config) = JirauConfig::find_in_current_or_parent()?;
@@ -246,6 +411,7 @@ fn handle_interactive_menu() -> Result<()> {
 
     let options = vec![
         "🪵  Criar um novo projeto (new)",
+        "➕  Adicionar plataforma a um projeto existente (add)",
         "🩺  Diagnosticar ambiente e ferramentas (doctor)",
         "🚀  Iniciar ciclo de desenvolvimento (dev)",
         "🔗  Regerar bindings UniFFI (bindings)",
@@ -265,8 +431,11 @@ fn handle_interactive_menu() -> Result<()> {
                     package: None,
                     android: false,
                     ios: false,
+                    desktop: false,
                     non_interactive: false,
                 })
+            } else if selected.contains("Adicionar plataforma") {
+                handle_add(AddArgs { platform: None })
             } else if selected.contains("Diagnosticar ambiente") {
                 handle_doctor(DoctorArgs {
                     json: false,

@@ -43,7 +43,10 @@ impl DoctorEngine {
         // 3. iOS Ecosystem
         items.extend(Self::check_ios());
 
-        // 4. Build Acceleration
+        // 4. Desktop Ecosystem (Rune UI)
+        items.extend(Self::check_desktop());
+
+        // 5. Build Acceleration
         items.extend(Self::check_tooling());
 
         let ok_count = items.iter().filter(|i| i.status == CheckStatus::Ok).count();
@@ -428,6 +431,70 @@ impl DoctorEngine {
                     fix_hint: None,
                 });
             }
+        }
+
+        items
+    }
+
+    fn check_desktop() -> Vec<DoctorItem> {
+        let mut items = Vec::new();
+
+        // Check platform and Apple Silicon constraint
+        if cfg!(target_os = "macos") {
+            let arch = Command::new("uname").arg("-m").output();
+            let is_arm64 = arch
+                .map(|out| String::from_utf8_lossy(&out.stdout).trim() == "arm64")
+                .unwrap_or(false);
+
+            if is_arm64 {
+                items.push(DoctorItem {
+                    category: "Desktop".to_string(),
+                    title: "Arquitetura macOS (Apple Silicon)".to_string(),
+                    status: CheckStatus::Ok,
+                    detail: "Processador Apple Silicon (ARM64) suportado".to_string(),
+                    fix_hint: None,
+                });
+            } else {
+                items.push(DoctorItem {
+                    category: "Desktop".to_string(),
+                    title: "Arquitetura macOS (Apple Silicon)".to_string(),
+                    status: CheckStatus::Error,
+                    detail: "macOS Intel detectado. O jirau suporta exclusivamente Apple Silicon (ARM64).".to_string(),
+                    fix_hint: Some("Execute em uma máquina Apple Silicon (M1/M2/M3/M4) para compilar para macOS.".to_string()),
+                });
+            }
+        } else if cfg!(target_os = "linux") {
+            let has_pkg_config = which::which("pkg-config").is_ok();
+            items.push(DoctorItem {
+                category: "Desktop".to_string(),
+                title: "Toolchain Desktop Linux (Rune / GPU)".to_string(),
+                status: if has_pkg_config {
+                    CheckStatus::Ok
+                } else {
+                    CheckStatus::Warning
+                },
+                detail: if has_pkg_config {
+                    "pkg-config presente para dependências gráficas".to_string()
+                } else {
+                    "pkg-config não encontrado (recomendado para compilar wgpu/wayland)".to_string()
+                },
+                fix_hint: if has_pkg_config {
+                    None
+                } else {
+                    Some(
+                        "sudo apt install pkg-config libxkbcommon-dev libfontconfig1-dev"
+                            .to_string(),
+                    )
+                },
+            });
+        } else if cfg!(target_os = "windows") {
+            items.push(DoctorItem {
+                category: "Desktop".to_string(),
+                title: "Ambiente Windows Desktop".to_string(),
+                status: CheckStatus::Ok,
+                detail: "Windows x64 suportado via Rune UI / DirectX / Vulkan".to_string(),
+                fix_hint: None,
+            });
         }
 
         items

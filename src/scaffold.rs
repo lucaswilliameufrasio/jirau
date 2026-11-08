@@ -1,4 +1,5 @@
 use crate::templates::android;
+use crate::templates::desktop;
 use crate::templates::ios;
 use crate::templates::root;
 use crate::templates::rust_core;
@@ -117,6 +118,22 @@ impl Scaffolder {
             fs::write(gen_dir.join(".gitkeep"), "")?;
         }
 
+        // 6. Desktop (Rune UI)
+        if ctx.platforms.contains(&"desktop".to_string()) {
+            let desktop_dir = project_dir
+                .join("crates")
+                .join(format!("{}-desktop", ctx.slug));
+            fs::create_dir_all(desktop_dir.join("src"))?;
+            fs::write(
+                desktop_dir.join("Cargo.toml"),
+                desktop::desktop_cargo_toml(ctx),
+            )?;
+            fs::write(
+                desktop_dir.join("src/main.rs"),
+                desktop::desktop_main_rs(ctx),
+            )?;
+        }
+
         ui::finish_spinner_success(
             &spinner,
             &format!("Projeto '{}' criado com sucesso!", ctx.name),
@@ -137,7 +154,11 @@ mod tests {
         let ctx = TemplateContext::new(
             "Acari App",
             "com.lucas.acari",
-            vec!["android".to_string(), "ios".to_string()],
+            vec![
+                "android".to_string(),
+                "ios".to_string(),
+                "desktop".to_string(),
+            ],
         );
 
         Scaffolder::create_project(&ctx, temp.path()).unwrap();
@@ -155,6 +176,8 @@ mod tests {
         assert!(root.join("crates/acari-app-ffi/uniffi.toml").exists());
         assert!(root.join("crates/acari-app-ffi/build.rs").exists());
         assert!(root.join("crates/acari-app-ffi/src/lib.rs").exists());
+        assert!(root.join("crates/acari-app-desktop/Cargo.toml").exists());
+        assert!(root.join("crates/acari-app-desktop/src/main.rs").exists());
 
         // Android
         assert!(root.join("android/settings.gradle.kts").exists());

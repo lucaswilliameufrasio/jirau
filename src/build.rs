@@ -96,6 +96,37 @@ impl ReleaseBuilder {
             }
         }
 
+        // Desktop build (Rune UI)
+        if platforms_to_build.contains(&"desktop".to_string()) {
+            ui::print_step("Compilando binário do aplicativo Desktop (Rune UI)...");
+            let desktop_pkg = format!("{}-desktop", slug);
+
+            let mut args = vec!["build", "--package", &desktop_pkg];
+            if release {
+                args.push("--release");
+            }
+
+            let status = Command::new("cargo")
+                .current_dir(root_dir)
+                .args(&args)
+                .status()
+                .with_context(|| format!("Falha ao compilar {}", desktop_pkg))?;
+
+            if status.success() {
+                let bin_path = if release {
+                    format!("target/release/{}", desktop_pkg)
+                } else {
+                    format!("target/debug/{}", desktop_pkg)
+                };
+                ui::print_success(&format!(
+                    "Binário Desktop gerado com sucesso em: {}",
+                    bin_path
+                ));
+            } else {
+                ui::print_error("Falha na compilação do binário Desktop.");
+            }
+        }
+
         ui::print_success("Processo de build finalizado.");
         Ok(())
     }

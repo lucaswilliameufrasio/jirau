@@ -30,8 +30,17 @@ pub enum Commands {
     /// Compila binários finais de release (multi-ABI para Android, XCFramework para iOS)
     Build(BuildArgs),
 
+    /// Adiciona uma nova plataforma a um projeto existente (ex: jirau add desktop)
+    Add(AddArgs),
+
     /// Verifica a versão do template e atualizações do jirau
     Upgrade,
+}
+
+#[derive(Args, Debug)]
+pub struct AddArgs {
+    /// Plataforma para adicionar (desktop, android, ios)
+    pub platform: Option<String>,
 }
 
 #[derive(Args, Debug)]
@@ -50,6 +59,10 @@ pub struct NewArgs {
     /// Inclui suporte para iOS
     #[arg(long)]
     pub ios: bool,
+
+    /// Inclui suporte para Desktop (UI em Rust com Rune)
+    #[arg(long)]
+    pub desktop: bool,
 
     /// Não pergunta nada de forma interativa (usa padrões para valores ausentes)
     #[arg(long)]

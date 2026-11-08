@@ -1,11 +1,24 @@
 use super::TemplateContext;
 
 pub fn root_cargo_toml(ctx: &TemplateContext) -> String {
+    let mut members = vec![format!("\"crates/{}-core\"", ctx.slug)];
+    if ctx.platforms.contains(&"android".to_string()) || ctx.platforms.contains(&"ios".to_string())
+    {
+        members.push(format!("\"crates/{}-ffi\"", ctx.slug));
+    }
+    if ctx.platforms.contains(&"desktop".to_string()) {
+        members.push(format!("\"crates/{}-desktop\"", ctx.slug));
+    }
+    let members_str = members
+        .iter()
+        .map(|m| format!("    {},", m))
+        .collect::<Vec<_>>()
+        .join("\n");
+
     format!(
         r#"[workspace]
 members = [
-    "crates/{slug}-core",
-    "crates/{slug}-ffi",
+{members}
 ]
 resolver = "2"
 
@@ -17,7 +30,7 @@ opt-level = 3
 lto = "thin"
 strip = true
 "#,
-        slug = ctx.slug
+        members = members_str
     )
 }
 
@@ -74,6 +87,11 @@ Este repositório adota a metodologia de testes rápidos em camada:
 4. **iOS (`ios/App`)**:
    - XCTest unitário para modelos `@Observable`.
    - Previews no SwiftUI Canvas.
+
+5. **Desktop (`crates/{slug}-desktop`)**:
+   - UI nativa renderizada em GPU com Rune (anomalyco/rune).
+   - Reutiliza a crate `{slug}-core` diretamente em Rust, sem overhead de FFI.
+   - Execução local: `cargo run --package {slug}-desktop`.
 
 Execute no host:
 ```bash

@@ -33,8 +33,9 @@ impl DevRunner {
         match platform.as_str() {
             "android" => Self::run_android_dev(root_dir, config, watch)?,
             "ios" => Self::run_ios_dev(root_dir, config, watch)?,
+            "desktop" => Self::run_desktop_dev(root_dir, config, watch)?,
             other => anyhow::bail!(
-                "Plataforma '{}' não reconhecida. Use 'android' ou 'ios'.",
+                "Plataforma '{}' não reconhecida. Use 'android', 'ios' ou 'desktop'.",
                 other
             ),
         }
@@ -265,6 +266,116 @@ impl DevRunner {
             // Loop similarly for iOS if needed
         }
 
+        Ok(())
+    }
+
+    fn run_desktop_dev(root_dir: &Path, config: &JirauConfig, watch: bool) -> Result<()> {
+        let slug = config.app.name.to_lowercase().replace(['_', ' '], "-");
+        let pkg_name = format!("{}-desktop", slug);
+
+        ui::print_info(&format!(
+            "Iniciando app desktop nativo ({}) com Rune UI...",
+            pkg_name.cyan().bold()
+        ));
+
+        if !watch {
+            let status = Command::new("cargo")
+                .current_dir(root_dir)
+                .args(["run", "--package", &pkg_name])
+                .status()
+                .with_context(|| format!("Falha ao executar {}", pkg_name))?;
+
+            if !status.success() {
+                anyhow::bail!("Execução do app desktop falhou.");
+            }
+            return Ok(());
+        }
+
+        ui::print_info("Observando alterações em 'crates/'... Pressione Ctrl+C para encerrar.\n");
+
+        let mut child = Command::new("cargo")
+            .current_dir(root_dir)
+            .args(["run", "--package", &pkg_name])
+            .spawn()
+            .with_context(|| format!("Falha ao iniciar {}", pkg_name))?;
+
+        let (tx, rx) = channel();
+        let mut watcher = RecommendedWatcher::new(tx, Config::default())?;
+        let crates_dir = root_dir.join("crates");
+
+        watcher.watch(&crates_dir, RecursiveMode::Recursive)?;
+        let mut last_build = Instant::now();
+
+        loop {
+            // Verifica se a janela foi fechada pelo usuário
+            if let Ok(Some(_)) = child.try_wait() {
+                ui::print_info("App desktop encerrado pelo usuário.");
+                break;
+            }
+
+            if let Ok(Ok(Event {
+                kind: EventKind::Modify(_),
+                paths,
+                ..
+            })) = rx.recv_timeout(Duration::from_millis(500))
+            {
+                if last_build.elapsed() < Duration::from_millis(1500) {
+                    continue;
+                }
+
+                let changed_rs = paths
+                    .iter()
+                    .any(|p| p.extension().is_some_and(|ext| ext == "rs"));
+                if !changed_rs {
+                    continue;
+                }
+
+                let relative_paths: Vec<String> = paths
+                    .iter()
+                    .filter_map(|p| {
+                        p.strip_prefix(root_dir)
+                            .ok()
+                            .map(|d| d.display().to_string())
+                    })
+                    .collect();
+
+                println!(
+                    "{} Alteração detectada em: {}",
+                    "➜".cyan().bold(),
+                    relative_paths.join(", ").yellow()
+                );
+
+                let _ = child.kill();
+                let _ = child.wait();
+
+                let spinner = ui::create_spinner("Recompilando e reiniciando Desktop...");
+                let start = Instant::now();
+
+                match Command::new("cargo")
+                    .current_dir(root_dir)
+                    .args(["run", "--package", &pkg_name])
+                    .spawn()
+                {
+                    Ok(new_child) => {
+                        child = new_child;
+                        ui::finish_spinner_success(
+                            &spinner,
+                            &format!("Reiniciado em {:.2}s!", start.elapsed().as_secs_f32()),
+                        );
+                        println!();
+                    }
+                    Err(e) => {
+                        ui::finish_spinner_error(&spinner, &format!("Falha ao reiniciar: {}", e));
+                        println!();
+                    }
+                }
+
+                last_build = Instant::now();
+            }
+        }
+
+        let _ = child.kill();
+        let _ = child.wait();
         Ok(())
     }
 }

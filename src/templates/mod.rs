@@ -1,4 +1,5 @@
 pub mod android;
+pub mod desktop;
 pub mod ios;
 pub mod root;
 pub mod rust_core;
