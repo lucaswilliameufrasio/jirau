@@ -4,14 +4,16 @@ mod cli;
 mod config;
 mod dev;
 mod doctor;
+mod run;
 mod scaffold;
 mod templates;
+mod test_runner;
 mod ui;
 pub mod upgrade;
 
 use anyhow::Result;
 use clap::Parser;
-use cli::{AddArgs, Cli, Commands, DevArgs, DoctorArgs, NewArgs, UpgradeArgs};
+use cli::{AddArgs, Cli, Commands, DevArgs, DoctorArgs, NewArgs, RunArgs, TestArgs, UpgradeArgs};
 use colored::*;
 use config::JirauConfig;
 use doctor::DoctorEngine;
@@ -25,6 +27,8 @@ fn main() -> Result<()> {
 
     match cli.command {
         Some(Commands::New(args)) => handle_new(args),
+        Some(Commands::Run(args)) => handle_run(args),
+        Some(Commands::Test(args)) => handle_test(args),
         Some(Commands::Doctor(args)) => handle_doctor(args),
         Some(Commands::Dev(args)) => handle_dev(args),
         Some(Commands::Bindings(args)) => handle_bindings(args.platform),
@@ -184,9 +188,36 @@ fn handle_new(args: NewArgs) -> Result<()> {
     };
     let plugins = args.plugin;
 
+    // Template da Aplicação
+    let app_template = match args.template {
+        Some(t) => t.to_lowercase(),
+        None if args.non_interactive => "starter".to_string(),
+        None => {
+            let options = vec![
+                "Starter (Contador simples e arquitetura de baseline)",
+                "Secure Vault (Cofre real de senhas, notas e tokens com SQLite)",
+            ];
+            let choice = inquire::Select::new("Selecione o template da aplicação:", options)
+                .with_help_message("Escolha entre o starter inicial ou o cofre real e funcional")
+                .prompt()?;
+            if choice.contains("Secure Vault") {
+                "vault".to_string()
+            } else {
+                "starter".to_string()
+            }
+        }
+    };
+
+    let storage = if app_template == "vault" && storage == "none" {
+        "sqlite".to_string()
+    } else {
+        storage
+    };
+
     println!();
     ui::print_step("Configuração do projeto:");
     ui::print_substep(&format!("Nome: {}", name.cyan().bold()));
+    ui::print_substep(&format!("Template: {}", app_template.cyan().bold()));
     ui::print_substep(&format!("Package ID: {}", package_id.cyan()));
     ui::print_substep(&format!("Plataformas: {}", platforms.join(", ").cyan()));
     ui::print_substep(&format!("Persistência: {}", storage.cyan()));
@@ -197,9 +228,15 @@ fn handle_new(args: NewArgs) -> Result<()> {
     if !plugins.is_empty() {
         ui::print_substep(&format!("Plugins: {}", plugins.join(", ").cyan()));
     }
+    if args.ci {
+        ui::print_substep(&format!(
+            "CI/CD: {}",
+            "GitHub Actions (.github/workflows/ci.yml)".cyan()
+        ));
+    }
     println!();
 
-    let ctx = TemplateContext::with_all_options(
+    let ctx = TemplateContext::with_full_spec(
         &name,
         &package_id,
         platforms.clone(),
@@ -207,6 +244,8 @@ fn handle_new(args: NewArgs) -> Result<()> {
         &android_build_system,
         &ui_theme,
         plugins,
+        &app_template,
+        args.ci,
         upgrade::CURRENT_TEMPLATE_VERSION,
     );
     let current_dir = env::current_dir()?;
@@ -310,6 +349,22 @@ fn handle_doctor(args: DoctorArgs) -> Result<()> {
 fn handle_dev(args: DevArgs) -> Result<()> {
     let (root_dir, config) = JirauConfig::find_in_current_or_parent()?;
     dev::DevRunner::run(&root_dir, &config, args.platform, !args.no_watch)
+}
+
+fn handle_run(args: RunArgs) -> Result<()> {
+    let (root_dir, config) = JirauConfig::find_in_current_or_parent()?;
+    run::RunEngine::run(
+        &root_dir,
+        &config,
+        args.platform,
+        args.device,
+        !args.no_watch,
+    )
+}
+
+fn handle_test(args: TestArgs) -> Result<()> {
+    let (root_dir, config) = JirauConfig::find_in_current_or_parent()?;
+    test_runner::TestRunner::run(&root_dir, &config, args.target, args.all)
 }
 
 fn handle_bindings(platform: Option<String>) -> Result<()> {
@@ -492,6 +547,8 @@ fn handle_interactive_menu() -> Result<()> {
 
     let options = vec![
         "🪵  Criar um novo projeto (new)",
+        "▶️   Executar no dispositivo/emulador (run)",
+        "🧪  Executar testes unitários e de integração (test)",
         "➕  Adicionar plataforma a um projeto existente (add)",
         "🩺  Diagnosticar ambiente e ferramentas (doctor)",
         "🚀  Iniciar ciclo de desenvolvimento (dev)",
@@ -520,8 +577,14 @@ fn handle_interactive_menu() -> Result<()> {
                     amper: false,
                     theme: None,
                     plugin: Vec::new(),
+                    template: None,
+                    ci: false,
                     non_interactive: false,
                 })
+            } else if selected.contains("Executar no dispositivo") {
+                handle_run(RunArgs::default())
+            } else if selected.contains("Executar testes") {
+                handle_test(TestArgs::default())
             } else if selected.contains("Adicionar plataforma") {
                 handle_add(AddArgs { platform: None })
             } else if selected.contains("Diagnosticar ambiente") {

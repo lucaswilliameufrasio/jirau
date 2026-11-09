@@ -4,6 +4,7 @@ use crate::templates::ios;
 use crate::templates::root;
 use crate::templates::rust_core;
 use crate::templates::rust_ffi;
+use crate::templates::vault;
 use crate::templates::TemplateContext;
 use crate::ui;
 use anyhow::{Context, Result};
@@ -39,13 +40,29 @@ impl Scaffolder {
         )?;
         fs::write(project_dir.join("jirau.toml"), root::jirau_toml(ctx))?;
 
+        if ctx.ci_workflow {
+            let workflows_dir = project_dir.join(".github/workflows");
+            fs::create_dir_all(&workflows_dir)?;
+            fs::write(workflows_dir.join("ci.yml"), root::root_ci_workflow(ctx))?;
+        }
+
         // 2. crates/<slug>-core
         let core_dir = project_dir
             .join("crates")
             .join(format!("{}-core", ctx.slug));
         fs::create_dir_all(core_dir.join("src"))?;
-        fs::write(core_dir.join("Cargo.toml"), rust_core::core_cargo_toml(ctx))?;
-        fs::write(core_dir.join("src/lib.rs"), rust_core::core_lib_rs(ctx))?;
+        let core_cargo = if ctx.app_template == "vault" {
+            vault::vault_core_cargo_toml(ctx)
+        } else {
+            rust_core::core_cargo_toml(ctx)
+        };
+        let core_lib = if ctx.app_template == "vault" {
+            vault::vault_core_lib_rs(ctx)
+        } else {
+            rust_core::core_lib_rs(ctx)
+        };
+        fs::write(core_dir.join("Cargo.toml"), core_cargo)?;
+        fs::write(core_dir.join("src/lib.rs"), core_lib)?;
 
         // 3. crates/<slug>-ffi
         let ffi_dir = project_dir.join("crates").join(format!("{}-ffi", ctx.slug));
@@ -54,10 +71,20 @@ impl Scaffolder {
         fs::write(ffi_dir.join("Cargo.toml"), rust_ffi::ffi_cargo_toml(ctx))?;
         fs::write(ffi_dir.join("build.rs"), rust_ffi::ffi_build_rs())?;
         fs::write(ffi_dir.join("uniffi.toml"), rust_ffi::ffi_uniffi_toml(ctx))?;
-        fs::write(ffi_dir.join("src/lib.rs"), rust_ffi::ffi_lib_rs(ctx))?;
+        let ffi_lib = if ctx.app_template == "vault" {
+            vault::vault_ffi_lib_rs(ctx)
+        } else {
+            rust_ffi::ffi_lib_rs(ctx)
+        };
+        let ffi_lifecycle = if ctx.app_template == "vault" {
+            vault::vault_ffi_lifecycle_test_rs(ctx)
+        } else {
+            rust_ffi::ffi_lifecycle_test_rs(ctx)
+        };
+        fs::write(ffi_dir.join("src/lib.rs"), ffi_lib)?;
         fs::write(
             ffi_dir.join("tests/lifecycle_integration_tests.rs"),
-            rust_ffi::ffi_lifecycle_test_rs(ctx),
+            ffi_lifecycle,
         )?;
 
         // 4. Android
@@ -101,10 +128,12 @@ impl Scaffolder {
                 app_dir.join("src/main/AndroidManifest.xml"),
                 android::app_android_manifest_xml(ctx),
             )?;
-            fs::write(
-                pkg_src_dir.join("MainActivity.kt"),
-                android::app_main_activity_kt(ctx),
-            )?;
+            let main_activity = if ctx.app_template == "vault" {
+                vault::vault_android_main_activity_kt(ctx)
+            } else {
+                android::app_main_activity_kt(ctx)
+            };
+            fs::write(pkg_src_dir.join("MainActivity.kt"), main_activity)?;
             fs::write(theme_dir.join("Color.kt"), android::theme_color_kt(ctx))?;
             fs::write(theme_dir.join("Type.kt"), android::theme_type_kt(ctx))?;
             fs::write(theme_dir.join("Theme.kt"), android::theme_theme_kt(ctx))?;
@@ -162,10 +191,12 @@ impl Scaffolder {
             fs::create_dir_all(&gen_dir)?;
 
             fs::write(ios_dir.join("project.yml"), ios::project_yml(ctx))?;
-            fs::write(
-                sources_dir.join("ContentView.swift"),
-                ios::content_view_swift(ctx),
-            )?;
+            let content_view = if ctx.app_template == "vault" {
+                vault::vault_ios_content_view_swift(ctx)
+            } else {
+                ios::content_view_swift(ctx)
+            };
+            fs::write(sources_dir.join("ContentView.swift"), content_view)?;
             fs::write(
                 sources_dir.join(format!("{}App.swift", ctx.pascal_name)),
                 ios::app_swift(ctx),
@@ -188,10 +219,12 @@ impl Scaffolder {
                 desktop_dir.join("Cargo.toml"),
                 desktop::desktop_cargo_toml(ctx),
             )?;
-            fs::write(
-                desktop_dir.join("src/main.rs"),
-                desktop::desktop_main_rs(ctx),
-            )?;
+            let desktop_main = if ctx.app_template == "vault" {
+                vault::vault_desktop_main_rs(ctx)
+            } else {
+                desktop::desktop_main_rs(ctx)
+            };
+            fs::write(desktop_dir.join("src/main.rs"), desktop_main)?;
         }
 
         ui::finish_spinner_success(

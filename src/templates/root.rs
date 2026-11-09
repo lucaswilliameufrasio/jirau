@@ -136,6 +136,7 @@ storage = "{storage}"
 android_build_system = "{android_build_system}"
 ui_theme = "{ui_theme}"
 plugins = [{plugins}]
+template = "{app_template}"
 
 [dev]
 default_android_abi = "arm64-v8a"
@@ -152,6 +153,7 @@ template_version = "{template_version}"
         android_build_system = ctx.android_build_system,
         ui_theme = ctx.ui_theme,
         plugins = plugins_str,
+        app_template = ctx.app_template,
         template_version = ctx.template_version
     )
 }
@@ -620,5 +622,106 @@ echo ""
 echo "Setup concluído!"
 "#,
         name = ctx.name
+    )
+}
+
+pub fn root_ci_workflow(ctx: &TemplateContext) -> String {
+    let has_android = ctx.platforms.contains(&"android".to_string());
+    let has_ios = ctx.platforms.contains(&"ios".to_string());
+
+    let mut android_steps = String::new();
+    if has_android {
+        android_steps = r#"
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'corretto'
+          java-version: '21'
+
+      - name: Cache Gradle Packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Run Android Unit Tests
+        run: |
+          if [ -f android/gradlew ]; then
+            cd android && ./gradlew testDebugUnitTest --no-daemon
+          fi
+"#
+        .to_string();
+    }
+
+    let mut ios_job = String::new();
+    if has_ios {
+        ios_job = format!(
+            r#"
+  ios-validation:
+    name: iOS Build Validation
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios, aarch64-apple-ios-sim
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode Project & Build
+        run: |
+          cd ios
+          xcodegen generate
+          xcodebuild -project {pascal_name}.xcodeproj -scheme {pascal_name} -configuration Debug -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO
+"#,
+            pascal_name = ctx.pascal_name
+        );
+    }
+
+    format!(
+        r#"name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  core-and-validation:
+    name: Rust Core & Lint Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+          targets: aarch64-linux-android, x86_64-linux-android
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Format Check
+        run: cargo fmt --check
+
+      - name: Clippy Lint
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Run Workspace Tests
+        run: cargo test --workspace
+{android_steps}
+{ios_job}
+"#,
+        android_steps = android_steps,
+        ios_job = ios_job
     )
 }

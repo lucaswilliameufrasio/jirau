@@ -7,6 +7,11 @@ name = "{slug}-desktop"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "{slug}-desktop"
+path = "src/main.rs"
+test = false
+
 [dependencies]
 {slug}-core = {{ path = "../{slug}-core" }}
 rune = {{ git = "https://github.com/anomalyco/rune" }}

@@ -1,0 +1,5 @@
+[bindings.kotlin]
+package_name = "io.github.jirau.vault.uniffi"
+
+[bindings.swift]
+module_name = "SecureVaultFFI"

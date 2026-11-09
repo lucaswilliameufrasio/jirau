@@ -4,6 +4,7 @@ pub mod ios;
 pub mod root;
 pub mod rust_core;
 pub mod rust_ffi;
+pub mod vault;
 
 pub struct TemplateContext {
     pub name: String,
@@ -17,7 +18,9 @@ pub struct TemplateContext {
     pub android_build_system: String, // "gradle" | "amper"
     pub ui_theme: String,             // "default" | "material3-extended" | "minimal"
     pub plugins: Vec<String>,         // ["logger", "analytics"]
-    pub template_version: String,     // "0.3.0"
+    pub app_template: String,         // "starter" | "vault"
+    pub ci_workflow: bool,
+    pub template_version: String, // "0.3.0"
 }
 
 impl TemplateContext {
@@ -57,6 +60,33 @@ impl TemplateContext {
         plugins: Vec<String>,
         template_version: &str,
     ) -> Self {
+        Self::with_full_spec(
+            name,
+            package_id,
+            platforms,
+            storage,
+            android_build_system,
+            ui_theme,
+            plugins,
+            "starter",
+            false,
+            template_version,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn with_full_spec(
+        name: &str,
+        package_id: &str,
+        platforms: Vec<String>,
+        storage: &str,
+        android_build_system: &str,
+        ui_theme: &str,
+        plugins: Vec<String>,
+        app_template: &str,
+        ci_workflow: bool,
+        template_version: &str,
+    ) -> Self {
         let slug = name.to_lowercase().replace(['_', ' '], "-");
         let rust_name = slug.replace('-', "_");
 
@@ -86,6 +116,8 @@ impl TemplateContext {
             android_build_system: android_build_system.to_string(),
             ui_theme: ui_theme.to_string(),
             plugins,
+            app_template: app_template.to_string(),
+            ci_workflow,
             template_version: template_version.to_string(),
         }
     }

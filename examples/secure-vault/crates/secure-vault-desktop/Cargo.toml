@@ -1,0 +1,13 @@
+[package]
+name = "secure-vault-desktop"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "secure-vault-desktop"
+path = "src/main.rs"
+test = false
+
+[dependencies]
+secure-vault-core = { path = "../secure-vault-core" }
+rune = { git = "https://github.com/anomalyco/rune" }

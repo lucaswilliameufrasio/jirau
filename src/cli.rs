@@ -18,6 +18,12 @@ pub enum Commands {
     /// Cria um novo projeto a partir do template nativo
     New(NewArgs),
 
+    /// Executa o aplicativo no dispositivo ou simulador selecionado
+    Run(RunArgs),
+
+    /// Executa testes unitários e de integração do ecossistema
+    Test(TestArgs),
+
     /// Diagnostica o ambiente de desenvolvimento (Rust, Android SDK/NDK, Xcode, etc.)
     Doctor(DoctorArgs),
 
@@ -99,9 +105,41 @@ pub struct NewArgs {
     #[arg(long)]
     pub plugin: Vec<String>,
 
+    /// Template da aplicação (starter, vault)
+    #[arg(long)]
+    pub template: Option<String>,
+
+    /// Gera workflow de CI/CD para GitHub Actions (.github/workflows/ci.yml)
+    #[arg(long)]
+    pub ci: bool,
+
     /// Não pergunta nada de forma interativa (usa padrões para valores ausentes)
     #[arg(long)]
     pub non_interactive: bool,
+}
+
+#[derive(Args, Debug, Default)]
+pub struct RunArgs {
+    /// Plataforma alvo (android, ios, desktop)
+    pub platform: Option<String>,
+
+    /// ID ou serial específico do dispositivo/emulador (opcional, bypass de seleção)
+    #[arg(short, long)]
+    pub device: Option<String>,
+
+    /// Desativa o monitoramento contínuo de alterações de código (watch mode)
+    #[arg(long)]
+    pub no_watch: bool,
+}
+
+#[derive(Args, Debug, Default)]
+pub struct TestArgs {
+    /// Alvo de teste (core, ffi, android, ios, all)
+    pub target: Option<String>,
+
+    /// Executa todos os testes em todas as plataformas disponíveis
+    #[arg(long)]
+    pub all: bool,
 }
 
 #[derive(Args, Debug)]

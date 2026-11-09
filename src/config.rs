@@ -29,6 +29,12 @@ pub struct AppConfig {
     pub ui_theme: String,
     #[serde(default = "default_plugins")]
     pub plugins: Vec<String>,
+    #[serde(default = "default_app_template")]
+    pub template: String,
+}
+
+fn default_app_template() -> String {
+    "starter".to_string()
 }
 
 fn default_platforms() -> Vec<String> {
@@ -124,6 +130,7 @@ impl JirauConfig {
                 android_build_system: android_build_system.to_string(),
                 ui_theme: "default".to_string(),
                 plugins: Vec::new(),
+                template: "starter".to_string(),
             },
             dev: DevConfig::default(),
             meta: MetaConfig::default(),

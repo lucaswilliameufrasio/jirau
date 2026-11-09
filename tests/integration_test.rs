@@ -293,3 +293,85 @@ fn test_ui_theme_and_ffi_lifecycle_tests() {
     assert!(jirau_toml.contains("ui_theme = \"material3-extended\""));
     assert!(jirau_toml.contains("plugins = [\"logger\"]"));
 }
+
+#[test]
+fn test_vault_template_and_ci_workflow() {
+    let temp = tempdir().unwrap();
+    let jirau_bin = env!("CARGO_BIN_EXE_jirau");
+
+    let status = Command::new(jirau_bin)
+        .current_dir(temp.path())
+        .args([
+            "new",
+            "vault-app",
+            "--package",
+            "com.test.vault",
+            "--android",
+            "--ios",
+            "--desktop",
+            "--sqlite",
+            "--template",
+            "vault",
+            "--ci",
+            "--non-interactive",
+        ])
+        .status()
+        .expect("Falha ao invocar jirau new com template vault");
+
+    assert!(
+        status.success(),
+        "jirau new com template vault deve ter sucesso"
+    );
+
+    let app_dir = temp.path().join("vault-app");
+
+    // CI Workflow
+    assert!(app_dir.join(".github/workflows/ci.yml").exists());
+    let ci_content = std::fs::read_to_string(app_dir.join(".github/workflows/ci.yml")).unwrap();
+    assert!(ci_content.contains("cargo test --workspace"));
+    assert!(ci_content.contains("runs-on: ubuntu-latest"));
+
+    // Vault-specific core files
+    let core_lib =
+        std::fs::read_to_string(app_dir.join("crates/vault-app-core/src/lib.rs")).unwrap();
+    assert!(core_lib.contains("VaultEngine"));
+    assert!(core_lib.contains("VaultCategory"));
+    assert!(core_lib.contains("generate_password"));
+
+    // Vault-specific FFI files
+    let ffi_lib = std::fs::read_to_string(app_dir.join("crates/vault-app-ffi/src/lib.rs")).unwrap();
+    assert!(ffi_lib.contains("NativeCategory"));
+    assert!(ffi_lib.contains("NativeVaultEngine"));
+
+    let ffi_test = std::fs::read_to_string(
+        app_dir.join("crates/vault-app-ffi/tests/lifecycle_integration_tests.rs"),
+    )
+    .unwrap();
+    assert!(ffi_test.contains("test_vault_ffi_lifecycle_and_concurrency"));
+
+    // Vault-specific Desktop file
+    let desktop_main =
+        std::fs::read_to_string(app_dir.join("crates/vault-app-desktop/src/main.rs")).unwrap();
+    assert!(desktop_main.contains("Desktop Vault"));
+    assert!(desktop_main.contains("DesktopState"));
+
+    // Vault-specific Android file
+    let main_activity = std::fs::read_to_string(
+        app_dir.join("android/app/src/main/java/com/test/vault/MainActivity.kt"),
+    )
+    .unwrap();
+    assert!(main_activity.contains("VaultViewModel"));
+    assert!(main_activity.contains("generateNewPassword"));
+    assert!(main_activity.contains("toggleFavorite"));
+
+    // Vault-specific iOS file
+    let content_view =
+        std::fs::read_to_string(app_dir.join("ios/App/Sources/ContentView.swift")).unwrap();
+    assert!(content_view.contains("VaultViewModel"));
+    assert!(content_view.contains("filteredItems"));
+
+    // jirau.toml configuration check
+    let jirau_toml = std::fs::read_to_string(app_dir.join("jirau.toml")).unwrap();
+    assert!(jirau_toml.contains("template = \"vault\""));
+    assert!(jirau_toml.contains("storage = \"sqlite\""));
+}

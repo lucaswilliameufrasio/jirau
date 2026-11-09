@@ -87,10 +87,12 @@ Fluxo direto inspirado no ecossistema Flutter:
 
 | Comando | O que faz | Equivalente Flutter |
 | :--- | :--- | :--- |
-| `jirau new <nome>` | Cria um projeto interativo ou via flags (`--android`, `--ios`, `--desktop`, `--sqlite`, `--amper`). | `flutter create` |
+| `jirau new <nome>` | Cria um projeto interativo ou via flags (`--android`, `--ios`, `--desktop`, `--sqlite`, `--amper`, `--template vault`, `--ci`). | `flutter create` |
 | `jirau add <plataforma>` | Adiciona uma plataforma a um projeto existente (`jirau add desktop`, `android`, `ios`). | `flutter create . --platforms` |
 | `jirau doctor` | Valida rustup, targets móveis, NDK, JDK, Xcode, Amper e dependências Desktop (Rune/GPU). | `flutter doctor` |
-| `jirau dev [android\|ios\|desktop]` | Hot loop: compila e executa o app com recarregamento/reinício rápido ao alterar `crates/`. | `flutter run` |
+| `jirau run [android\|ios\|desktop]` | Executa o app: detecta dispositivo único conectado/bootado e abre direto; se múltiplos, abre menu de seleção interativo. | `flutter run` |
+| `jirau dev [android\|ios\|desktop]` | Hot loop: compila e executa o app com recarregamento/reinício rápido ao alterar `crates/`. | `flutter run --watch` |
+| `jirau test [core\|ffi\|android\|ios\|desktop\|all]` | Suíte unificada de testes: valida Rust Core, FFI lifecycle, JUnit 5 no Android, XCTest no iOS e desktop. | `flutter test` |
 | `jirau bindings` | Regera os wrappers Kotlin e Swift a partir das anotações em `-ffi`. | `build_runner` |
 | `jirau build [android\|ios\|desktop] --release` | Compila os binários finais (APK/AAB, XCFramework ou binário de desktop otimizado). | `flutter build` |
 | `jirau upgrade [--force]` | Sincroniza melhorias do template via 3-way merge preservando modificações manuais. | `flutter upgrade` |
@@ -144,6 +146,7 @@ O `jirau doctor` diagnostica e ajuda a instalar os itens necessários:
 
 O repositório inclui uma pasta [`examples/`](examples/) com projetos gerados diretamente via CLI para demonstrar cada combinação de ambiente:
 
+- **[`secure-vault`](examples/secure-vault/)**: App real e funcional de **gerenciador de senhas e cofre local**. Contém schema SQLite com índices, CRUD com busca em tempo real, gerador criptográfico de senhas e medidor de entropia no core Rust, painel Desktop com GPU (Rune), Jetpack Compose e SwiftUI nativos.
 - **[`all-platforms-showcase`](examples/all-platforms-showcase/)**: App com **todas as plataformas ativas** (Android Jetpack Compose + iOS SwiftUI + Desktop Rune UI), persistência SQLite embutida (`rusqlite`), JetBrains Amper declarativo, kit de design Material 3 e testes de ciclo de vida FFI.
 - **[`mobile-gradle-starter`](examples/mobile-gradle-starter/)**: Arquitetura mobile pura (Android + iOS) usando Gradle (Kotlin DSL) padrão e estado em memória reativo.
 - **[`desktop-first-sqlite`](examples/desktop-first-sqlite/)**: Aplicativo Desktop nativo em Rust consumindo diretamente o `StorageEngine` SQLite sem ponte de FFI.

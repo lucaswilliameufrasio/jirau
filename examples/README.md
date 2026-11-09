@@ -67,25 +67,52 @@ jirau new desktop-first-sqlite \
 
 ---
 
+## 🔐 4. `secure-vault` (App Funcional do Mundo Real: Gerenciador de Senhas)
+
+Exemplo de aplicação **real e totalmente funcional**, além de um simples contador. Demonstra um cofre seguro com criptografia, cálculo de entropia/força de credenciais e persistência local:
+
+- **Plataformas**: Android (Jetpack Compose), iOS (SwiftUI) e Desktop (Rune UI).
+- **Core Rust**: 
+  - Banco de dados SQLite relacional via `rusqlite` com esquema de tabela `vault_items` e índices de performance.
+  - CRUD completo com busca textual em tempo real e filtros por categoria (`Login`, `Note`, `ApiKey`, `CreditCard`).
+  - Gerador criptográfico de senhas e avaliador de força/entropia (`evaluate_password`).
+  - Métricas agregadas de integridade do cofre (`VaultStats`).
+- **Camada FFI**: UniFFI com testes de integração concorrente (`lifecycle_integration_tests.rs`).
+- **Desktop (Rune)**: Painel completo com barra lateral de métricas, gerador reativo de senhas e lista de credenciais mascaradas.
+- **Android**: Compose Material 3 com filtro por chips, máscara de senhas e gerador reativo.
+- **iOS**: SwiftUI com `@Observable`, barra de busca integrada e cartões nativos.
+- **CI/CD**: Pipeline do GitHub Actions pré-configurado (`.github/workflows/ci.yml`).
+
+### Como foi gerado:
+```bash
+jirau new "Secure Vault" \
+  --package "io.github.jirau.vault" \
+  --android --ios --desktop \
+  --sqlite \
+  --template vault \
+  --theme material3-extended \
+  --plugin logger \
+  --ci \
+  --non-interactive
+```
+
+---
+
 ## 🚀 Como Executar Qualquer Exemplo
 
 Entre na pasta do projeto desejado e use os comandos do `jirau`:
 
 ```bash
-cd examples/all-platforms-showcase
+cd examples/secure-vault
 
 # Valida o ambiente para todas as plataformas ativas
 jirau doctor
 
-# Roda testes unitários do core Rust e testes de integração FFI
-cargo test --workspace
+# Executa testes unificados (Core Rust, Integração FFI, Android JUnit, iOS XCTest, Desktop)
+jirau test all
 
-# Inicia o app desktop com live restart
-jirau dev desktop
-
-# Inicia o app Android no dispositivo/emulador conectado
-jirau dev android
-
-# Inicia o app iOS no simulador (exclusivo para macOS Apple Silicon)
-jirau dev ios
+# Roda o app na plataforma desejada (com seleção inteligente de dispositivo)
+jirau run desktop   # Desktop Rune UI
+jirau run android   # Android (detecta dispositivo único ou abre menu interativo)
+jirau run ios       # iOS Simulator (macOS Apple Silicon)
 ```
