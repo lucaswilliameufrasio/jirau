@@ -21,7 +21,7 @@ body = """
             {% if commit.breaking %}[**breaking**] {% endif %}\
             {{ commit.message | upper_first }}\
     {% endfor %}
-{% endfor %}
+{% endfor %}\n
 """
 trim = true
 render_always = true
@@ -32,8 +32,9 @@ conventional_commits = true
 filter_unconventional = true
 require_conventional = false
 split_commits = false
+# Remove referências de PR "(#123)" do título sem apagar escopos como "(release)".
 commit_preprocessors = [
-    { pattern = "\\(.*\\)", replace = "" },
+    { pattern = "\\s*\\(#[0-9]+\\)", replace = "" },
 ]
 protect_breaking_commits = true
 commit_parsers = [
