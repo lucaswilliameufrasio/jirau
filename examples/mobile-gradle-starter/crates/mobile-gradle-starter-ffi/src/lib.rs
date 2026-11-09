@@ -1,5 +1,5 @@
 use std::sync::Mutex;
-use mobile-gradle-starter_core as core;
+use mobile_gradle_starter_core as core;
 
 uniffi::setup_scaffolding!();
 
@@ -35,6 +35,14 @@ impl From<core::CoreError> for NativeError {
     }
 }
 
+impl std::fmt::Display for NativeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl std::error::Error for NativeError {}
+
 #[derive(uniffi::Object)]
 pub struct AppEngine {
     inner: Mutex<core::StateEngine>,
@@ -61,12 +69,12 @@ impl AppEngine {
 
     pub fn decrement(&self) -> Result<NativeAppState, NativeError> {
         let mut engine = self.inner.lock().unwrap();
-        engine.decrement().map(Into::into).map_err(Into::into)
+        engine.decrement().map(Into::into).map_err(NativeError::from)
     }
 
     pub fn update_title(&self, new_title: String) -> Result<NativeAppState, NativeError> {
         let mut engine = self.inner.lock().unwrap();
-        engine.update_title(&new_title).map(Into::into).map_err(Into::into)
+        engine.update_title(&new_title).map(Into::into).map_err(NativeError::from)
     }
 }
 

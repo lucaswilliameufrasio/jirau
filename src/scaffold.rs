@@ -32,6 +32,7 @@ impl Scaffolder {
         fs::write(project_dir.join("Cargo.toml"), root::root_cargo_toml(ctx))?;
         fs::write(project_dir.join(".gitignore"), root::root_gitignore())?;
         fs::write(project_dir.join(".mise.toml"), root::root_mise_toml())?;
+        fs::write(project_dir.join("Makefile"), root::root_makefile(ctx))?;
         fs::write(
             project_dir.join("TESTING_STANDARD.md"),
             root::testing_standard_md(ctx),
@@ -130,6 +131,23 @@ impl Scaffolder {
                     let _ = fs::set_permissions(&amper_script, fs::Permissions::from_mode(0o755));
                 }
             }
+
+            // Documentação de setup e scripts de ambiente Android
+            let docs_dir = project_dir.join("docs");
+            let scripts_dir = project_dir.join("scripts");
+            fs::create_dir_all(&docs_dir)?;
+            fs::create_dir_all(&scripts_dir)?;
+            fs::write(
+                docs_dir.join("setup-android.md"),
+                root::setup_android_md(ctx),
+            )?;
+            let setup_script = scripts_dir.join("setup-android-env.sh");
+            fs::write(&setup_script, root::setup_android_env_sh(ctx))?;
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let _ = fs::set_permissions(&setup_script, fs::Permissions::from_mode(0o755));
+            }
         }
 
         // 5. iOS
@@ -209,6 +227,7 @@ mod tests {
         assert!(root.join("Cargo.toml").exists());
         assert!(root.join(".gitignore").exists());
         assert!(root.join(".mise.toml").exists());
+        assert!(root.join("Makefile").exists());
         assert!(root.join("TESTING_STANDARD.md").exists());
         assert!(root.join("jirau.toml").exists());
 
@@ -242,6 +261,8 @@ mod tests {
         assert!(root
             .join("android/app/src/androidTest/java/com/lucas/acari/NativeLifecycleTest.kt")
             .exists());
+        assert!(root.join("docs/setup-android.md").exists());
+        assert!(root.join("scripts/setup-android-env.sh").exists());
 
         // iOS
         assert!(root.join("ios/project.yml").exists());

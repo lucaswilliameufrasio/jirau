@@ -245,18 +245,56 @@ impl DoctorEngine {
         }
 
         // ANDROID_HOME / SDK
-        let sdk_dir = env::var("ANDROID_HOME")
+        let explicit_sdk = env::var("ANDROID_HOME")
             .or_else(|_| env::var("ANDROID_SDK_ROOT"))
             .map(PathBuf::from);
 
-        match sdk_dir {
-            Ok(ref p) if p.is_dir() => {
+        let home_dir = env::var("HOME")
+            .or_else(|_| env::var("USERPROFILE"))
+            .ok()
+            .map(PathBuf::from);
+
+        let default_sdk_path = if cfg!(target_os = "macos") {
+            home_dir.as_ref().map(|h| h.join("Library/Android/sdk"))
+        } else if cfg!(target_os = "windows") {
+            env::var("LOCALAPPDATA")
+                .ok()
+                .map(|l| PathBuf::from(l).join("Android/Sdk"))
+                .or_else(|| {
+                    home_dir
+                        .as_ref()
+                        .map(|h| h.join("AppData/Local/Android/Sdk"))
+                })
+        } else {
+            home_dir.as_ref().map(|h| h.join("Android/Sdk"))
+        };
+
+        let sdk_detected = match explicit_sdk {
+            Ok(ref p) if p.is_dir() => Some((p.clone(), true)),
+            _ => default_sdk_path.filter(|p| p.is_dir()).map(|p| (p, false)),
+        };
+
+        match sdk_detected {
+            Some((ref p, is_explicit)) => {
+                let detail = if is_explicit {
+                    format!("Localizado em {}", p.display())
+                } else {
+                    format!("Localizado no diretório padrão {}", p.display())
+                };
+                let fix_hint = if !is_explicit {
+                    Some(format!(
+                        "Dica: Exporte export ANDROID_HOME={} no seu shell para ferramentas de linha de comando",
+                        p.display()
+                    ))
+                } else {
+                    None
+                };
                 items.push(DoctorItem {
                     category: "Android".to_string(),
                     title: "Android SDK".to_string(),
                     status: CheckStatus::Ok,
-                    detail: format!("Localizado em {}", p.display()),
-                    fix_hint: None,
+                    detail,
+                    fix_hint,
                 });
 
                 // NDK check
@@ -282,18 +320,21 @@ impl DoctorEngine {
                         category: "Android".to_string(),
                         title: "Android NDK".to_string(),
                         status: CheckStatus::Error,
-                        detail: "NDK não encontrado em $ANDROID_HOME/ndk".to_string(),
-                        fix_hint: Some("Instale o NDK via Android Studio SDK Manager ou 'sdkmanager \"ndk;26.1.10909125\"'".to_string()),
+                        detail: format!("NDK não encontrado em {}/ndk", p.display()),
+                        fix_hint: Some("Instale o NDK via sdkmanager 'ndk;27.2.12479018' ou pelo Android Studio SDK Manager".to_string()),
                     });
                 }
             }
-            _ => {
+            None => {
                 items.push(DoctorItem {
                     category: "Android".to_string(),
                     title: "Android SDK".to_string(),
                     status: CheckStatus::Error,
-                    detail: "Variável $ANDROID_HOME ou $ANDROID_SDK_ROOT não definida ou diretório não existe".to_string(),
-                    fix_hint: Some("Defina export ANDROID_HOME=$HOME/Android/Sdk no seu ~/.bashrc ou ~/.zshrc".to_string()),
+                    detail: "Variável $ANDROID_HOME não definida e SDK não encontrado no caminho padrão".to_string(),
+                    fix_hint: Some(
+                        "Para servidores headless/CLI Debian/Linux: consulte docs/setup-android.md ou instale via sdkmanager. Para desktop: instale o Android Studio e defina export ANDROID_HOME=$HOME/Android/Sdk"
+                            .to_string(),
+                    ),
                 });
             }
         }
