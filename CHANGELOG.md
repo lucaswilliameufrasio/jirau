@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.1] - 2026-11-09
+
+### Features
+
+- *(cli)* Translate clap help, usage and argument errors
+
+### Other
+
+- *(changelog)* Generate CHANGELOG.md only with git-cliff
+
 ## [0.4.0] - 2026-11-09
 
 ### Breaking Changes

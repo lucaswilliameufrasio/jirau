@@ -1,6 +1,6 @@
 [package]
 name = "jirau"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2024"
 authors = ["Lucas Eufrasio <lucaswilliameufrasio@users.noreply.github.com>"]
 description = "Native cross-platform scaffold CLI (Rust core + Android Jetpack Compose + iOS SwiftUI) via UniFFI."
