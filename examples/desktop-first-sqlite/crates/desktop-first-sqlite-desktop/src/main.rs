@@ -43,7 +43,11 @@ fn view(s: &DesktopState, _: &mut Cx<DesktopState>) -> El {
         .padding(20.0)
         .radius(12.0)
         .fill(t.card)
-        .child(text("Contador (Rust Core):").font(type_::LABEL).color(t.text_secondary))
+        .child(
+            text("Contador (Rust Core):")
+                .font(type_::LABEL)
+                .color(t.text_secondary),
+        )
         .child(counter_val)
         .child(text(&s.status).font(type_::LABEL).color(t.text_secondary));
 
@@ -54,11 +58,9 @@ fn view(s: &DesktopState, _: &mut Cx<DesktopState>) -> El {
         .py(10.0)
         .radius(8.0)
         .fill(t.control_off)
-        .on_press(|s: &mut DesktopState| {
-            match s.engine.decrement() {
-                Ok(_) => s.status = "Decrementado via Rust StateEngine".to_string(),
-                Err(_) => s.status = "Erro: valor não pode ser negativo".to_string(),
-            }
+        .on_press(|s: &mut DesktopState| match s.engine.decrement() {
+            Ok(_) => s.status = "Decrementado via Rust StateEngine".to_string(),
+            Err(_) => s.status = "Erro: valor não pode ser negativo".to_string(),
         })
         .child(text("- Decrementar").color(t.text));
 

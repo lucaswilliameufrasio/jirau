@@ -82,8 +82,8 @@ impl StorageEngine {
     }
 
     pub fn open(path: &str) -> Result<Self, CoreError> {
-        let conn = rusqlite::Connection::open(path)
-            .map_err(|e| CoreError::StorageError(e.to_string()))?;
+        let conn =
+            rusqlite::Connection::open(path).map_err(|e| CoreError::StorageError(e.to_string()))?;
         Self::init(conn)
     }
 
@@ -118,8 +118,13 @@ impl StorageEngine {
         let mut rows = stmt
             .query(rusqlite::params![key])
             .map_err(|e| CoreError::StorageError(e.to_string()))?;
-        if let Some(row) = rows.next().map_err(|e| CoreError::StorageError(e.to_string()))? {
-            let val: String = row.get(0).map_err(|e| CoreError::StorageError(e.to_string()))?;
+        if let Some(row) = rows
+            .next()
+            .map_err(|e| CoreError::StorageError(e.to_string()))?
+        {
+            let val: String = row
+                .get(0)
+                .map_err(|e| CoreError::StorageError(e.to_string()))?;
             Ok(Some(val))
         } else {
             Ok(None)
@@ -144,14 +149,20 @@ impl StorageEngine {
     pub fn delete_item(&self, key: &str) -> Result<bool, CoreError> {
         let count = self
             .conn
-            .execute("DELETE FROM kv_store WHERE key = ?1", rusqlite::params![key])
+            .execute(
+                "DELETE FROM kv_store WHERE key = ?1",
+                rusqlite::params![key],
+            )
             .map_err(|e| CoreError::StorageError(e.to_string()))?;
         Ok(count > 0)
     }
 }
 
 pub fn greet(name: &str) -> String {
-    format!("Olá, {}! Rodando diretamente do núcleo em Rust.", name.trim())
+    format!(
+        "Olá, {}! Rodando diretamente do núcleo em Rust.",
+        name.trim()
+    )
 }
 
 #[cfg(test)]
@@ -174,7 +185,9 @@ mod tests {
         let s1 = engine.increment();
         assert_eq!(s1.counter, 1);
 
-        let s2 = engine.decrement().expect("decrement deve funcionar acima de zero");
+        let s2 = engine
+            .decrement()
+            .expect("decrement deve funcionar acima de zero");
         assert_eq!(s2.counter, 0);
 
         let err = engine.decrement().unwrap_err();
@@ -207,5 +220,4 @@ mod tests {
         assert!(store.delete_item("chave").unwrap());
         assert_eq!(store.get_item("chave").unwrap(), None);
     }
-
 }

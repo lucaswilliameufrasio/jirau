@@ -1,4 +1,5 @@
 use colored::*;
+use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::path::PathBuf;
@@ -29,6 +30,16 @@ pub struct DoctorReport {
 }
 
 pub struct DoctorEngine;
+
+/// Categoria do `--json` (estável) → rótulo exibido no relatório.
+const CATEGORY_TOOLING: &str = "Tooling";
+
+fn category_label(category: &str) -> String {
+    match category {
+        CATEGORY_TOOLING => t!("doctor.category_tooling").into_owned(),
+        other => other.to_string(),
+    }
+}
 
 impl DoctorEngine {
     pub fn run_all() -> DoctorReport {
@@ -76,7 +87,7 @@ impl DoctorEngine {
                 let v = String::from_utf8_lossy(&out.stdout).trim().to_string();
                 items.push(DoctorItem {
                     category: "Rust".to_string(),
-                    title: "Compilador Rust (rustc)".to_string(),
+                    title: t!("doctor.rustc_title").into_owned(),
                     status: CheckStatus::Ok,
                     detail: v,
                     fix_hint: None,
@@ -85,9 +96,9 @@ impl DoctorEngine {
             _ => {
                 items.push(DoctorItem {
                     category: "Rust".to_string(),
-                    title: "Compilador Rust (rustc)".to_string(),
+                    title: t!("doctor.rustc_title").into_owned(),
                     status: CheckStatus::Error,
-                    detail: "rustc não encontrado no PATH".to_string(),
+                    detail: t!("doctor.rustc_missing").into_owned(),
                     fix_hint: Some(
                         "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
                             .to_string(),
@@ -102,7 +113,7 @@ impl DoctorEngine {
                 let v = String::from_utf8_lossy(&out.stdout).trim().to_string();
                 items.push(DoctorItem {
                     category: "Rust".to_string(),
-                    title: "Gerenciador de Pacotes Cargo".to_string(),
+                    title: t!("doctor.cargo_title").into_owned(),
                     status: CheckStatus::Ok,
                     detail: v,
                     fix_hint: None,
@@ -111,10 +122,10 @@ impl DoctorEngine {
             _ => {
                 items.push(DoctorItem {
                     category: "Rust".to_string(),
-                    title: "Gerenciador de Pacotes Cargo".to_string(),
+                    title: t!("doctor.cargo_title").into_owned(),
                     status: CheckStatus::Error,
-                    detail: "cargo não encontrado no PATH".to_string(),
-                    fix_hint: Some("Instale o rustup para obter o cargo".to_string()),
+                    detail: t!("doctor.cargo_missing").into_owned(),
+                    fix_hint: Some(t!("doctor.cargo_hint").into_owned()),
                 });
             }
         }
@@ -142,17 +153,25 @@ impl DoctorEngine {
         if missing_android.is_empty() {
             items.push(DoctorItem {
                 category: "Rust".to_string(),
-                title: "Targets Rust Android".to_string(),
+                title: t!("doctor.android_targets_title").into_owned(),
                 status: CheckStatus::Ok,
-                detail: format!("Instalados: {}", required_android_targets.join(", ")),
+                detail: t!(
+                    "doctor.targets_installed",
+                    targets = required_android_targets.join(", ")
+                )
+                .into_owned(),
                 fix_hint: None,
             });
         } else {
             items.push(DoctorItem {
                 category: "Rust".to_string(),
-                title: "Targets Rust Android".to_string(),
+                title: t!("doctor.android_targets_title").into_owned(),
                 status: CheckStatus::Error,
-                detail: format!("Faltando: {}", missing_android.join(", ")),
+                detail: t!(
+                    "doctor.targets_missing",
+                    targets = missing_android.join(", ")
+                )
+                .into_owned(),
                 fix_hint: Some(format!("rustup target add {}", missing_android.join(" "))),
             });
         }
@@ -168,22 +187,26 @@ impl DoctorEngine {
         if missing_ios.is_empty() {
             items.push(DoctorItem {
                 category: "Rust".to_string(),
-                title: "Targets Rust iOS".to_string(),
+                title: t!("doctor.ios_targets_title").into_owned(),
                 status: CheckStatus::Ok,
-                detail: format!("Instalados: {}", required_ios_targets.join(", ")),
+                detail: t!(
+                    "doctor.targets_installed",
+                    targets = required_ios_targets.join(", ")
+                )
+                .into_owned(),
                 fix_hint: None,
             });
         } else {
             let is_macos = cfg!(target_os = "macos");
             items.push(DoctorItem {
                 category: "Rust".to_string(),
-                title: "Targets Rust iOS".to_string(),
+                title: t!("doctor.ios_targets_title").into_owned(),
                 status: if is_macos {
                     CheckStatus::Error
                 } else {
                     CheckStatus::Warning
                 },
-                detail: format!("Faltando: {}", missing_ios.join(", ")),
+                detail: t!("doctor.targets_missing", targets = missing_ios.join(", ")).into_owned(),
                 fix_hint: Some(format!("rustup target add {}", missing_ios.join(" "))),
             });
         }
@@ -192,17 +215,17 @@ impl DoctorEngine {
         if which::which("cargo-ndk").is_ok() {
             items.push(DoctorItem {
                 category: "Rust".to_string(),
-                title: "cargo-ndk (compilação Android)".to_string(),
+                title: t!("doctor.cargo_ndk_title").into_owned(),
                 status: CheckStatus::Ok,
-                detail: "Disponível no PATH".to_string(),
+                detail: t!("doctor.available_in_path").into_owned(),
                 fix_hint: None,
             });
         } else {
             items.push(DoctorItem {
                 category: "Rust".to_string(),
-                title: "cargo-ndk (compilação Android)".to_string(),
+                title: t!("doctor.cargo_ndk_title").into_owned(),
                 status: CheckStatus::Error,
-                detail: "Utilitário cargo-ndk não encontrado".to_string(),
+                detail: t!("doctor.cargo_ndk_missing").into_owned(),
                 fix_hint: Some("cargo install cargo-ndk".to_string()),
             });
         }
@@ -221,7 +244,8 @@ impl DoctorEngine {
                 } else {
                     &out.stderr
                 });
-                let first_line = v.lines().next().unwrap_or("Java instalado");
+                let java_installed = t!("doctor.java_installed");
+                let first_line = v.lines().next().unwrap_or(&java_installed);
                 items.push(DoctorItem {
                     category: "Android".to_string(),
                     title: "Java Development Kit (JDK)".to_string(),
@@ -235,11 +259,8 @@ impl DoctorEngine {
                     category: "Android".to_string(),
                     title: "Java Development Kit (JDK)".to_string(),
                     status: CheckStatus::Error,
-                    detail: "JDK não encontrado no PATH".to_string(),
-                    fix_hint: Some(
-                        "Instale o OpenJDK 17 ou 21 (ex: sudo apt install openjdk-17-jdk)"
-                            .to_string(),
-                    ),
+                    detail: t!("doctor.jdk_missing").into_owned(),
+                    fix_hint: Some(t!("doctor.jdk_hint").into_owned()),
                 });
             }
         }
@@ -277,15 +298,12 @@ impl DoctorEngine {
         match sdk_detected {
             Some((ref p, is_explicit)) => {
                 let detail = if is_explicit {
-                    format!("Localizado em {}", p.display())
+                    t!("doctor.sdk_located", path = p.display()).into_owned()
                 } else {
-                    format!("Localizado no diretório padrão {}", p.display())
+                    t!("doctor.sdk_located_default", path = p.display()).into_owned()
                 };
                 let fix_hint = if !is_explicit {
-                    Some(format!(
-                        "Dica: Exporte export ANDROID_HOME={} no seu shell para ferramentas de linha de comando",
-                        p.display()
-                    ))
+                    Some(t!("doctor.sdk_export_hint", path = p.display()).into_owned())
                 } else {
                     None
                 };
@@ -312,7 +330,7 @@ impl DoctorEngine {
                         category: "Android".to_string(),
                         title: "Android NDK".to_string(),
                         status: CheckStatus::Ok,
-                        detail: "NDK localizado".to_string(),
+                        detail: t!("doctor.ndk_located").into_owned(),
                         fix_hint: None,
                     });
                 } else {
@@ -320,8 +338,8 @@ impl DoctorEngine {
                         category: "Android".to_string(),
                         title: "Android NDK".to_string(),
                         status: CheckStatus::Error,
-                        detail: format!("NDK não encontrado em {}/ndk", p.display()),
-                        fix_hint: Some("Instale o NDK via sdkmanager 'ndk;27.2.12479018' ou pelo Android Studio SDK Manager".to_string()),
+                        detail: t!("doctor.ndk_missing", path = p.display()).into_owned(),
+                        fix_hint: Some(t!("doctor.ndk_hint").into_owned()),
                     });
                 }
             }
@@ -330,11 +348,8 @@ impl DoctorEngine {
                     category: "Android".to_string(),
                     title: "Android SDK".to_string(),
                     status: CheckStatus::Error,
-                    detail: "Variável $ANDROID_HOME não definida e SDK não encontrado no caminho padrão".to_string(),
-                    fix_hint: Some(
-                        "Para servidores headless/CLI Debian/Linux: consulte docs/setup-android.md ou instale via sdkmanager. Para desktop: instale o Android Studio e defina export ANDROID_HOME=$HOME/Android/Sdk"
-                            .to_string(),
-                    ),
+                    detail: t!("doctor.sdk_missing").into_owned(),
+                    fix_hint: Some(t!("doctor.sdk_hint").into_owned()),
                 });
             }
         }
@@ -353,13 +368,14 @@ impl DoctorEngine {
             }
 
             let detail = if dev_list.is_empty() {
-                "adb disponível (nenhum dispositivo conectado)".to_string()
+                t!("doctor.adb_no_devices").into_owned()
             } else {
-                format!(
-                    "adb disponível ({} dispositivo(s): {})",
-                    dev_list.len(),
-                    dev_list.join(", ")
+                t!(
+                    "doctor.adb_devices",
+                    count = dev_list.len(),
+                    devices = dev_list.join(", ")
                 )
+                .into_owned()
             };
 
             items.push(DoctorItem {
@@ -374,8 +390,8 @@ impl DoctorEngine {
                 category: "Android".to_string(),
                 title: "Android Debug Bridge (adb)".to_string(),
                 status: CheckStatus::Warning,
-                detail: "adb não encontrado no PATH".to_string(),
-                fix_hint: Some("Adicione $ANDROID_HOME/platform-tools ao seu PATH".to_string()),
+                detail: t!("doctor.adb_missing").into_owned(),
+                fix_hint: Some(t!("doctor.adb_hint").into_owned()),
             });
         }
 
@@ -389,9 +405,9 @@ impl DoctorEngine {
         if !is_macos {
             items.push(DoctorItem {
                 category: "iOS".to_string(),
-                title: "Ambiente iOS (macOS)".to_string(),
+                title: t!("doctor.ios_env_title").into_owned(),
                 status: CheckStatus::Warning,
-                detail: "Executando em Linux. Projetos iOS com XcodeGen podem ser gerados, mas a compilação final requer macOS + Xcode.".to_string(),
+                detail: t!("doctor.ios_env_linux").into_owned(),
                 fix_hint: None,
             });
             return items;
@@ -405,7 +421,7 @@ impl DoctorEngine {
                     category: "iOS".to_string(),
                     title: "Xcode & Command Line Tools".to_string(),
                     status: CheckStatus::Ok,
-                    detail: format!("Configurado em {}", path),
+                    detail: t!("doctor.xcode_configured", path = path).into_owned(),
                     fix_hint: None,
                 });
             }
@@ -414,11 +430,8 @@ impl DoctorEngine {
                     category: "iOS".to_string(),
                     title: "Xcode & Command Line Tools".to_string(),
                     status: CheckStatus::Error,
-                    detail: "Xcode não selecionado".to_string(),
-                    fix_hint: Some(
-                        "xcode-select --install ou instale o Xcode completo pela App Store"
-                            .to_string(),
-                    ),
+                    detail: t!("doctor.xcode_missing").into_owned(),
+                    fix_hint: Some(t!("doctor.xcode_hint").into_owned()),
                 });
             }
         }
@@ -429,7 +442,7 @@ impl DoctorEngine {
                 category: "iOS".to_string(),
                 title: "XcodeGen".to_string(),
                 status: CheckStatus::Ok,
-                detail: "Disponível no PATH".to_string(),
+                detail: t!("doctor.available_in_path").into_owned(),
                 fix_hint: None,
             });
         } else {
@@ -437,9 +450,7 @@ impl DoctorEngine {
                 category: "iOS".to_string(),
                 title: "XcodeGen".to_string(),
                 status: CheckStatus::Warning,
-                detail:
-                    "XcodeGen não encontrado. Necessário para gerar o .xcodeproj sem conflitos."
-                        .to_string(),
+                detail: t!("doctor.xcodegen_missing").into_owned(),
                 fix_hint: Some("brew install xcodegen".to_string()),
             });
         }
@@ -454,21 +465,18 @@ impl DoctorEngine {
                 let booted_count = v.lines().filter(|l| l.contains("(Booted)")).count();
                 items.push(DoctorItem {
                     category: "iOS".to_string(),
-                    title: "Simulador iOS (simctl)".to_string(),
+                    title: t!("doctor.simctl_title").into_owned(),
                     status: CheckStatus::Ok,
-                    detail: format!(
-                        "simctl operacional ({} simulador(es) em execução)",
-                        booted_count
-                    ),
+                    detail: t!("doctor.simctl_ok", count = booted_count).into_owned(),
                     fix_hint: None,
                 });
             }
             _ => {
                 items.push(DoctorItem {
                     category: "iOS".to_string(),
-                    title: "Simulador iOS (simctl)".to_string(),
+                    title: t!("doctor.simctl_title").into_owned(),
                     status: CheckStatus::Warning,
-                    detail: "Não foi possível listar simuladores via xcrun simctl".to_string(),
+                    detail: t!("doctor.simctl_failed").into_owned(),
                     fix_hint: None,
                 });
             }
@@ -490,34 +498,34 @@ impl DoctorEngine {
             if is_arm64 {
                 items.push(DoctorItem {
                     category: "Desktop".to_string(),
-                    title: "Arquitetura macOS (Apple Silicon)".to_string(),
+                    title: t!("doctor.macos_arch_title").into_owned(),
                     status: CheckStatus::Ok,
-                    detail: "Processador Apple Silicon (ARM64) suportado".to_string(),
+                    detail: t!("doctor.macos_arm64_ok").into_owned(),
                     fix_hint: None,
                 });
             } else {
                 items.push(DoctorItem {
                     category: "Desktop".to_string(),
-                    title: "Arquitetura macOS (Apple Silicon)".to_string(),
+                    title: t!("doctor.macos_arch_title").into_owned(),
                     status: CheckStatus::Error,
-                    detail: "macOS Intel detectado. O jirau suporta exclusivamente Apple Silicon (ARM64).".to_string(),
-                    fix_hint: Some("Execute em uma máquina Apple Silicon (M1/M2/M3/M4) para compilar para macOS.".to_string()),
+                    detail: t!("doctor.macos_intel").into_owned(),
+                    fix_hint: Some(t!("doctor.macos_intel_hint").into_owned()),
                 });
             }
         } else if cfg!(target_os = "linux") {
             let has_pkg_config = which::which("pkg-config").is_ok();
             items.push(DoctorItem {
                 category: "Desktop".to_string(),
-                title: "Toolchain Desktop Linux (Rune / GPU)".to_string(),
+                title: t!("doctor.linux_desktop_title").into_owned(),
                 status: if has_pkg_config {
                     CheckStatus::Ok
                 } else {
                     CheckStatus::Warning
                 },
                 detail: if has_pkg_config {
-                    "pkg-config presente para dependências gráficas".to_string()
+                    t!("doctor.pkg_config_ok").into_owned()
                 } else {
-                    "pkg-config não encontrado (recomendado para compilar wgpu/wayland)".to_string()
+                    t!("doctor.pkg_config_missing").into_owned()
                 },
                 fix_hint: if has_pkg_config {
                     None
@@ -531,9 +539,9 @@ impl DoctorEngine {
         } else if cfg!(target_os = "windows") {
             items.push(DoctorItem {
                 category: "Desktop".to_string(),
-                title: "Ambiente Windows Desktop".to_string(),
+                title: t!("doctor.windows_desktop_title").into_owned(),
                 status: CheckStatus::Ok,
-                detail: "Windows x64 suportado via Rune UI / DirectX / Vulkan".to_string(),
+                detail: t!("doctor.windows_desktop_ok").into_owned(),
                 fix_hint: None,
             });
         }
@@ -547,18 +555,18 @@ impl DoctorEngine {
         // sccache
         if which::which("sccache").is_ok() {
             items.push(DoctorItem {
-                category: "Otimização".to_string(),
-                title: "sccache (Cache de Compilação C/Rust)".to_string(),
+                category: CATEGORY_TOOLING.to_string(),
+                title: t!("doctor.sccache_title").into_owned(),
                 status: CheckStatus::Ok,
-                detail: "Disponível no PATH (acelera compilações repetidas)".to_string(),
+                detail: t!("doctor.sccache_ok").into_owned(),
                 fix_hint: None,
             });
         } else {
             items.push(DoctorItem {
-                category: "Otimização".to_string(),
-                title: "sccache (Cache de Compilação C/Rust)".to_string(),
+                category: CATEGORY_TOOLING.to_string(),
+                title: t!("doctor.sccache_title").into_owned(),
                 status: CheckStatus::Warning,
-                detail: "Não instalado (opcional, porém altamente recomendado)".to_string(),
+                detail: t!("doctor.sccache_missing").into_owned(),
                 fix_hint: Some("cargo install sccache".to_string()),
             });
         }
@@ -567,7 +575,7 @@ impl DoctorEngine {
     }
 
     pub fn print_report(report: &DoctorReport) {
-        println!("{}", "Diagnóstico do Ambiente jirau doctor".bold());
+        println!("{}", t!("doctor.report_title").bold());
         println!(
             "{}",
             "══════════════════════════════════════════════════════════".cyan()
@@ -578,7 +586,11 @@ impl DoctorEngine {
             if item.category != current_cat {
                 println!(
                     "\n{}",
-                    format!("── {} ──────────────────────────────", item.category).bright_black()
+                    format!(
+                        "── {} ──────────────────────────────",
+                        category_label(&item.category)
+                    )
+                    .bright_black()
                 );
                 current_cat = &item.category;
             }
@@ -600,7 +612,7 @@ impl DoctorEngine {
                         format!("— {}", item.detail).yellow()
                     );
                     if let Some(ref fix) = item.fix_hint {
-                        println!("    {} {}", "Sugestão:".cyan(), fix.bold());
+                        println!("    {} {}", t!("doctor.suggestion").cyan(), fix.bold());
                     }
                 }
                 CheckStatus::Error => {
@@ -612,9 +624,9 @@ impl DoctorEngine {
                     );
                     if let Some(ref fix) = item.fix_hint {
                         println!(
-                            "    {} Execute: {}",
-                            "Solução:".cyan().bold(),
-                            fix.green().bold()
+                            "    {} {}",
+                            t!("doctor.solution").cyan().bold(),
+                            t!("doctor.run_command", command = fix.green().bold())
                         );
                     }
                 }
@@ -626,21 +638,18 @@ impl DoctorEngine {
             "══════════════════════════════════════════════════════════".cyan()
         );
         if report.error_count == 0 && report.warning_count == 0 {
-            println!(
-                "{} Tudo pronto! Seu ambiente possui todas as ferramentas necessárias.",
-                "✔".green().bold()
-            );
+            println!("{} {}", "✔".green().bold(), t!("doctor.all_ready"));
         } else if report.error_count == 0 {
             println!(
-                "{} Ambiente pronto para a maioria dos fluxos, com {} aviso(s) opcionais.",
+                "{} {}",
                 "!".yellow().bold(),
-                report.warning_count
+                t!("doctor.ready_with_warnings", count = report.warning_count)
             );
         } else {
             println!(
-                "{} Foram identificadas {} pendência(s) obrigatória(s). Execute os comandos sugeridos acima para resolver.",
+                "{} {}",
                 "✖".red().bold(),
-                report.error_count
+                t!("doctor.has_errors", count = report.error_count)
             );
         }
         println!();

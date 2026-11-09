@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  core:
+    name: Rust core (fmt, clippy, tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Format check
+        run: cargo fmt --all --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Tests
+        run: cargo test --workspace
+
+  android:
+    name: Android (Rust core + APK + unit tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-linux-android
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      # O Gradle chama scripts/build-android-ffi.sh (cargo-ndk + bindings Kotlin).
+      - name: Build APK & run unit tests
+        working-directory: android
+        run: ./gradlew assembleDebug testDebugUnitTest -Pjirau.rustAbis=x86_64
+
+  ios:
+    name: iOS (Rust core XCFramework + app build)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios, aarch64-apple-ios-sim
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Build Rust core XCFramework & Swift bindings
+        run: ./scripts/build-ios-ffi.sh debug
+
+      - name: Generate Xcode project & build
+        run: |
+          cd ios
+          xcodegen generate
+          xcodebuild -project SecureVault.xcodeproj -scheme SecureVault -configuration Debug -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO

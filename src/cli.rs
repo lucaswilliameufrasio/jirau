@@ -5,176 +5,180 @@ use clap::{Args, Parser, Subcommand};
     name = "jirau",
     author = "Lucas Eufrasio <lucaswilliameufrasio@users.noreply.github.com>",
     version,
-    about = "🪵 CLI de scaffold nativo multiplataforma: Rust + Android (Compose) + iOS (SwiftUI)",
-    long_about = "Jirau é uma CLI inspirada no ecossistema Flutter (create, doctor, run) que gera e opera projetos com núcleo compartilhado em Rust e UIs 100% nativas em Jetpack Compose e SwiftUI via UniFFI."
+    about = "🪵 Native cross-platform scaffold CLI: Rust + Android (Compose) + iOS (SwiftUI)",
+    long_about = "Jirau is a Flutter-inspired CLI (create, doctor, run) that generates and operates projects with a shared Rust core and 100% native UIs in Jetpack Compose and SwiftUI via UniFFI."
 )]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Option<Commands>,
+
+    /// Language / idioma (en, pt-BR). Default: JIRAU_LANG or the system locale.
+    #[arg(long, global = true, value_parser = ["en", "pt-BR"])]
+    pub lang: Option<String>,
 }
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    /// Cria um novo projeto a partir do template nativo
+    /// Creates a new project from the native template
     New(NewArgs),
 
-    /// Executa o aplicativo no dispositivo ou simulador selecionado
+    /// Runs the app on the selected device or simulator
     Run(RunArgs),
 
-    /// Executa testes unitários e de integração do ecossistema
+    /// Runs unit, integration and on-device tests
     Test(TestArgs),
 
-    /// Diagnostica o ambiente de desenvolvimento (Rust, Android SDK/NDK, Xcode, etc.)
+    /// Diagnoses the development environment (Rust, Android SDK/NDK, Xcode, etc.)
     Doctor(DoctorArgs),
 
-    /// Executa o ciclo de desenvolvimento rápido (compilação de ABI única, hot loop)
+    /// Fast development loop (build, install and redeploy on change)
     Dev(DevArgs),
 
-    /// Regera os bindings Kotlin e Swift a partir das anotações UniFFI
+    /// Regenerates the Kotlin and Swift bindings from the UniFFI annotations
     Bindings(BindingsArgs),
 
-    /// Compila binários finais de release (multi-ABI para Android, XCFramework para iOS)
+    /// Builds final artifacts (multi-ABI APK for Android, XCFramework for iOS)
     Build(BuildArgs),
 
-    /// Adiciona uma nova plataforma a um projeto existente (ex: jirau add desktop)
+    /// Adds a platform to an existing project (e.g. jirau add desktop)
     Add(AddArgs),
 
-    /// Sincroniza e atualiza o template do projeto via 3-way merge
+    /// Updates the project to the current template via 3-way merge
     Upgrade(UpgradeArgs),
 }
 
 #[derive(Args, Debug, Default)]
 pub struct UpgradeArgs {
-    /// Força o upgrade mesmo que o projeto já esteja na versão mais recente
+    /// Run even if the project is already on the latest template
     #[arg(short, long)]
     pub force: bool,
 
-    /// Simula as alterações sem gravar nada em disco
+    /// Show what would change without writing anything
     #[arg(long)]
     pub dry_run: bool,
 }
 
 #[derive(Args, Debug)]
 pub struct AddArgs {
-    /// Plataforma para adicionar (desktop, android, ios)
+    /// Platform to add (desktop, android, ios)
     pub platform: Option<String>,
 }
 
 #[derive(Args, Debug)]
 pub struct NewArgs {
-    /// Nome do aplicativo/projeto
+    /// App/project name
     pub name: Option<String>,
 
-    /// Package ID / Bundle Identifier (ex: com.exemplo.meuapp)
+    /// Package ID / Bundle Identifier (e.g. com.example.myapp)
     #[arg(short, long)]
     pub package: Option<String>,
 
-    /// Inclui suporte para Android
+    /// Include Android support
     #[arg(long)]
     pub android: bool,
 
-    /// Inclui suporte para iOS
+    /// Include iOS support
     #[arg(long)]
     pub ios: bool,
 
-    /// Inclui suporte para Desktop (UI em Rust com Rune)
+    /// Include Desktop support (Rust UI with Rune)
     #[arg(long)]
     pub desktop: bool,
 
-    /// Camada de persistência local (none, sqlite)
+    /// Local persistence layer (none, sqlite)
     #[arg(long)]
     pub storage: Option<String>,
 
-    /// Ativa SQLite embutido via rusqlite
+    /// Enable embedded SQLite via rusqlite
     #[arg(long)]
     pub sqlite: bool,
 
-    /// Sistema de build do Android (gradle, amper)
+    /// Android build system (only gradle; amper is no longer supported)
     #[arg(long)]
     pub android_build_system: Option<String>,
 
-    /// Usa JetBrains Amper como sistema de build do Android
+    /// Deprecated: JetBrains Amper is no longer supported (the command fails explaining why)
     #[arg(long)]
     pub amper: bool,
 
-    /// Tema de UI inicial (default, material3-extended, minimal)
+    /// Initial UI theme (default, material3-extended, minimal)
     #[arg(long)]
     pub theme: Option<String>,
 
-    /// Plugins opcionais de arquitetura (ex: --plugin logger)
+    /// Optional architecture plugins (e.g. --plugin logger)
     #[arg(long)]
     pub plugin: Vec<String>,
 
-    /// Template da aplicação (starter, vault)
+    /// App template (starter, vault)
     #[arg(long)]
     pub template: Option<String>,
 
-    /// Gera workflow de CI/CD para GitHub Actions (.github/workflows/ci.yml)
+    /// Generate a GitHub Actions CI workflow (.github/workflows/ci.yml)
     #[arg(long)]
     pub ci: bool,
 
-    /// Não pergunta nada de forma interativa (usa padrões para valores ausentes)
+    /// Never prompt (use defaults for missing values)
     #[arg(long)]
     pub non_interactive: bool,
 }
 
 #[derive(Args, Debug, Default)]
 pub struct RunArgs {
-    /// Plataforma alvo (android, ios, desktop)
+    /// Target platform (android, ios, desktop)
     pub platform: Option<String>,
 
-    /// ID ou serial específico do dispositivo/emulador (opcional, bypass de seleção)
+    /// Device/emulator ID or serial (skips selection)
     #[arg(short, long)]
     pub device: Option<String>,
 
-    /// Desativa o monitoramento contínuo de alterações de código (watch mode)
+    /// Disable watch mode (no redeploy on code changes)
     #[arg(long)]
     pub no_watch: bool,
 }
 
 #[derive(Args, Debug, Default)]
 pub struct TestArgs {
-    /// Alvo de teste (core, ffi, android, ios, all)
+    /// Test target (core, ffi, android, ios, desktop, all)
     pub target: Option<String>,
 
-    /// Executa todos os testes em todas as plataformas disponíveis
+    /// Run every suite on every available platform
     #[arg(long)]
     pub all: bool,
 }
 
 #[derive(Args, Debug)]
 pub struct DoctorArgs {
-    /// Exporta o resultado do diagnóstico em formato JSON (ideal para CI/CD)
+    /// Print the diagnosis as JSON (ideal for CI)
     #[arg(long)]
     pub json: bool,
 
-    /// Executa profiling de build no Gradle (--profile) para diagnosticar gargalos de tempo
+    /// Profile the Gradle build (--profile) to find slow steps
     #[arg(long)]
     pub profile: bool,
 }
 
 #[derive(Args, Debug)]
 pub struct DevArgs {
-    /// Plataforma alvo (android ou ios)
+    /// Target platform (android, ios, desktop)
     pub platform: Option<String>,
 
-    /// Desativa o monitoramento contínuo de alterações de código (watch mode)
+    /// Disable watch mode (no redeploy on code changes)
     #[arg(long)]
     pub no_watch: bool,
 }
 
 #[derive(Args, Debug)]
 pub struct BindingsArgs {
-    /// Plataforma para gerar bindings (android, ios ou omitido para ambas)
+    /// Platform (android, ios; omit for both)
     pub platform: Option<String>,
 }
 
 #[derive(Args, Debug)]
 pub struct BuildArgs {
-    /// Plataforma alvo (android, ios ou omitido para ambas)
+    /// Target platform (android, ios, desktop; omit for all)
     pub platform: Option<String>,
 
-    /// Gera compilação otimizada de release
+    /// Optimized release build
     #[arg(long, default_value_t = true)]
     pub release: bool,
 }

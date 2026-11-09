@@ -1,0 +1,53 @@
+# Mensagens de dev.rs (jirau dev).
+_version: 2
+dev.starting_flow:
+  en: "Starting development flow for %{platform}"
+  pt-BR: "Iniciando fluxo de desenvolvimento para %{platform}"
+dev.unknown_platform:
+  en: "Unknown platform '%{platform}'. Use 'android', 'ios' or 'desktop'."
+  pt-BR: "Plataforma '%{platform}' não reconhecida. Use 'android', 'ios' ou 'desktop'."
+dev.adb_device_detected:
+  en: "Active Android device detected via adb."
+  pt-BR: "Dispositivo Android ativo detectado via adb."
+dev.select_platform:
+  en: "Select the platform for development:"
+  pt-BR: "Selecione a plataforma para desenvolvimento:"
+dev.select_help:
+  en: "Use the arrow keys to choose and Enter to confirm"
+  pt-BR: "Use as setas para escolher e Enter para confirmar"
+dev.cancelled:
+  en: "Operation cancelled by the user."
+  pt-BR: "Operação cancelada pelo usuário."
+dev.target_simulator:
+  en: "Target simulator: %{name} (%{udid})"
+  pt-BR: "Simulador alvo: %{name} (%{udid})"
+dev.desktop_starting:
+  en: "Starting native desktop app (%{package}) with Rune UI..."
+  pt-BR: "Iniciando app desktop nativo (%{package}) com Rune UI..."
+dev.exec_failed:
+  en: "Failed to run %{package}"
+  pt-BR: "Falha ao executar %{package}"
+dev.desktop_failed:
+  en: "The desktop app run failed."
+  pt-BR: "Execução do app desktop falhou."
+dev.watching_crates:
+  en: "Watching for changes in 'crates/'... Press Ctrl+C to quit.\n"
+  pt-BR: "Observando alterações em 'crates/'... Pressione Ctrl+C para encerrar.\n"
+dev.start_failed:
+  en: "Failed to start %{package}"
+  pt-BR: "Falha ao iniciar %{package}"
+dev.desktop_closed:
+  en: "Desktop app closed by the user."
+  pt-BR: "App desktop encerrado pelo usuário."
+dev.change_detected:
+  en: "Change detected in: %{paths}"
+  pt-BR: "Alteração detectada em: %{paths}"
+dev.restarting:
+  en: "Rebuilding and restarting Desktop..."
+  pt-BR: "Recompilando e reiniciando Desktop..."
+dev.restarted:
+  en: "Restarted in %{secs}s!"
+  pt-BR: "Reiniciado em %{secs}s!"
+dev.restart_failed:
+  en: "Failed to restart: %{error}"
+  pt-BR: "Falha ao reiniciar: %{error}"

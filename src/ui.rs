@@ -1,26 +1,20 @@
 use colored::*;
 use indicatif::{ProgressBar, ProgressStyle};
+use rust_i18n::t;
 use std::time::Duration;
 
 pub fn print_banner() {
+    let border = "─".repeat(58);
+    println!("{}", format!("╭{border}╮").cyan());
     println!(
         "{}",
-        "╭──────────────────────────────────────────────────────────╮".cyan()
+        format!("│  {:<55}│", t!("ui.banner_title")).cyan().bold()
     );
     println!(
         "{}",
-        "│  🪵  jirau — CLI de Scaffold Nativo Multiplataforma     │"
-            .cyan()
-            .bold()
+        format!("│      {:<52}│", "Rust + Android (Compose) + iOS (SwiftUI)").cyan()
     );
-    println!(
-        "{}",
-        "│      Rust + Android (Compose) + iOS (SwiftUI)            │".cyan()
-    );
-    println!(
-        "{}",
-        "╰──────────────────────────────────────────────────────────╯".cyan()
-    );
+    println!("{}", format!("╰{border}╯").cyan());
     println!();
 }
 
@@ -64,11 +58,6 @@ pub fn create_spinner(msg: &str) -> ProgressBar {
 pub fn finish_spinner_success(pb: &ProgressBar, msg: &str) {
     pb.set_style(ProgressStyle::default_spinner().template("{msg}").unwrap());
     pb.finish_with_message(format!("{} {}", "✔".green().bold(), msg));
-}
-
-pub fn finish_spinner_warning(pb: &ProgressBar, msg: &str) {
-    pb.set_style(ProgressStyle::default_spinner().template("{msg}").unwrap());
-    pb.finish_with_message(format!("{} {}", "!".yellow().bold(), msg));
 }
 
 pub fn finish_spinner_error(pb: &ProgressBar, msg: &str) {

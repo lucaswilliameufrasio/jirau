@@ -1,0 +1,5 @@
+[bindings.kotlin]
+package_name = "com.example.desktop.uniffi"
+
+[bindings.swift]
+module_name = "DesktopFirstSqliteFFI"

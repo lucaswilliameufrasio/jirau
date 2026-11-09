@@ -1,0 +1,12 @@
+[package]
+name = "secure-vault-ffi"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "staticlib", "rlib"]
+name = "secure_vault_ffi"
+
+[dependencies]
+secure-vault-core = { path = "../secure-vault-core" }
+uniffi = { version = "0.32", features = ["cli"] }

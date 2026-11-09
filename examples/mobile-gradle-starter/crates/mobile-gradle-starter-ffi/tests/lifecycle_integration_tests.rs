@@ -19,13 +19,19 @@ fn test_native_app_lifecycle_and_state_flow() {
     assert_eq!(state_after_dec.counter, 0);
 
     // Validação de erro tipado exportado via UniFFI
-    let dec_error = engine.decrement().expect_err("decremento abaixo de zero deve falhar");
+    let dec_error = engine
+        .decrement()
+        .expect_err("decremento abaixo de zero deve falhar");
     assert!(matches!(dec_error, native::NativeError::NegativeValue));
 
-    let title_res = engine.update_title("Meu App Pro".to_string()).expect("título válido");
+    let title_res = engine
+        .update_title("Meu App Pro".to_string())
+        .expect("título válido");
     assert_eq!(title_res.title, "Meu App Pro");
 
-    let empty_title_error = engine.update_title("   ".to_string()).expect_err("título vazio deve falhar");
+    let empty_title_error = engine
+        .update_title("   ".to_string())
+        .expect_err("título vazio deve falhar");
     assert!(matches!(empty_title_error, native::NativeError::EmptyTitle));
 
     // 4. Teste de Concorrência Simulando UI Threads Concorrentes

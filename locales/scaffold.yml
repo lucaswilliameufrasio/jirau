@@ -1,0 +1,17 @@
+# Mensagens de scaffold.rs (geração do projeto).
+_version: 2
+scaffold.write_failed:
+  en: "Failed to write %{path}"
+  pt-BR: "Falha ao gravar %{path}"
+scaffold.dir_exists:
+  en: "Directory '%{path}' already exists. Pick a different name or remove the directory before continuing."
+  pt-BR: "O diretório '%{path}' já existe. Escolha outro nome ou remova o diretório antes de continuar."
+scaffold.generating:
+  en: "Generating jirau project structure..."
+  pt-BR: "Gerando estrutura do projeto jirau..."
+scaffold.create_dir_failed:
+  en: "Failed to create directory %{path}"
+  pt-BR: "Falha ao criar diretório %{path}"
+scaffold.created:
+  en: "Project '%{name}' created successfully!"
+  pt-BR: "Projeto '%{name}' criado com sucesso!"

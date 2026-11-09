@@ -1,0 +1,68 @@
+# Mensagens de run.rs (jirau run: seleção de plataforma e dispositivo).
+_version: 2
+run.unknown_platform:
+  en: "Unknown platform '%{platform}'. Use 'android', 'ios' or 'desktop'."
+  pt-BR: "Plataforma '%{platform}' não reconhecida. Use 'android', 'ios' ou 'desktop'."
+run.select_platform:
+  en: "Select the platform to run on:"
+  pt-BR: "Selecione a plataforma para execução:"
+run.select_help:
+  en: "Use the arrow keys to choose and Enter to confirm"
+  pt-BR: "Use as setas para escolher e Enter para confirmar"
+run.cancelled:
+  en: "Operation cancelled by the user."
+  pt-BR: "Operação cancelada pelo usuário."
+run.selection_cancelled:
+  en: "Selection cancelled by the user."
+  pt-BR: "Seleção cancelada pelo usuário."
+run.android_device_not_found:
+  en: "Android device '%{target}' not found. Connected: %{connected}"
+  pt-BR: "Dispositivo Android '%{target}' não encontrado. Conectados: %{connected}"
+run.none_connected:
+  en: "none"
+  pt-BR: "nenhum"
+run.no_android_devices:
+  en: "No connected Android device or emulator was found via ADB.\nSolutions:\n• Connect a physical device over USB with 'USB debugging' enabled.\n• Or start an Android emulator from Android Studio / 'emulator @<name>'.\n• Then run 'adb devices' to confirm the connection."
+  pt-BR: "Nenhum dispositivo ou emulador Android conectado foi encontrado via ADB.\nSoluções:\n• Conecte um aparelho físico via USB com 'Depuração USB' habilitada.\n• Ou inicie um emulador Android via Android Studio / 'emulator @<nome>'.\n• Em seguida, execute 'adb devices' para confirmar a conexão."
+run.single_android_device:
+  en: "Single Android device detected: %{model} (%{serial}) — starting right away..."
+  pt-BR: "Dispositivo Android único detectado: %{model} (%{serial}) — iniciando diretamente..."
+run.select_android_device:
+  en: "Select the Android device to run on:"
+  pt-BR: "Selecione o dispositivo Android para executar:"
+run.multiple_devices_help:
+  en: "More than one connected device was detected"
+  pt-BR: "Mais de um dispositivo conectado foi detectado"
+run.ios_requires_macos:
+  en: "Running on an iOS simulator requires macOS with Xcode and xcrun installed.\nOn Linux, you can test the app on 'android' or 'desktop'."
+  pt-BR: "Execução em simulador iOS requer macOS com Xcode e xcrun instalados.\nNo Linux, você pode testar o app em 'android' ou 'desktop'."
+run.ios_simulator_not_found:
+  en: "iOS simulator '%{target}' not found. List the available ones with 'xcrun simctl list devices available'."
+  pt-BR: "Simulador iOS '%{target}' não encontrado. Liste os disponíveis com 'xcrun simctl list devices available'."
+run.booted_simulator_detected:
+  en: "Active iOS simulator detected: %{name} (%{udid}) — starting right away..."
+  pt-BR: "Simulador iOS ativo detectado: %{name} (%{udid}) — iniciando diretamente..."
+run.select_booted_simulator:
+  en: "Select the active iOS simulator:"
+  pt-BR: "Selecione o simulador iOS ativo:"
+run.no_ios_simulators:
+  en: "No available iOS simulator was found via 'xcrun simctl list'."
+  pt-BR: "Nenhum simulador iOS disponível encontrado via 'xcrun simctl list'."
+run.no_booted_select_one:
+  en: "No active simulator. Select one to boot:"
+  pt-BR: "Nenhum simulador ativo. Selecione um para iniciar:"
+run.ios_simulator_selected:
+  en: "Selected iOS simulator: %{name} (%{udid})"
+  pt-BR: "Simulador iOS selecionado: %{name} (%{udid})"
+run.ios_app_started:
+  en: "App launched successfully on the iOS simulator!"
+  pt-BR: "Aplicativo iniciado com sucesso no simulador iOS!"
+run.desktop_starting:
+  en: "Starting native Desktop binary: %{package}"
+  pt-BR: "Iniciando binário Desktop nativo: %{package}"
+run.exec_failed:
+  en: "Failed to run %{package}"
+  pt-BR: "Falha ao executar %{package}"
+run.desktop_exit_error:
+  en: "The desktop binary exited with an error."
+  pt-BR: "Execução do binário desktop encerrou com erro."

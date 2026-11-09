@@ -110,12 +110,16 @@ fn test_desktop_scaffold_and_add() {
         .expect("Falha ao invocar jirau add desktop");
     assert!(status.success(), "jirau add desktop deve ter sucesso");
 
-    assert!(mobile_dir
-        .join("crates/mobile-only-desktop/Cargo.toml")
-        .exists());
-    assert!(mobile_dir
-        .join("crates/mobile-only-desktop/src/main.rs")
-        .exists());
+    assert!(
+        mobile_dir
+            .join("crates/mobile-only-desktop/Cargo.toml")
+            .exists()
+    );
+    assert!(
+        mobile_dir
+            .join("crates/mobile-only-desktop/src/main.rs")
+            .exists()
+    );
 
     let root_cargo = std::fs::read_to_string(mobile_dir.join("Cargo.toml")).unwrap();
     assert!(root_cargo.contains("crates/mobile-only-desktop"));
@@ -125,7 +129,7 @@ fn test_desktop_scaffold_and_add() {
 }
 
 #[test]
-fn test_sqlite_and_amper_scaffold() {
+fn test_sqlite_scaffold_and_amper_is_rejected() {
     let temp = tempdir().unwrap();
     let jirau_bin = env!("CARGO_BIN_EXE_jirau");
 
@@ -133,45 +137,42 @@ fn test_sqlite_and_amper_scaffold() {
         .current_dir(temp.path())
         .args([
             "new",
-            "sql-amper-app",
+            "sql-app",
             "--package",
-            "com.test.sqlamper",
+            "com.test.sql",
             "--android",
             "--sqlite",
-            "--amper",
             "--non-interactive",
         ])
         .status()
-        .expect("Falha ao criar sql-amper-app");
+        .expect("Falha ao criar sql-app");
+    assert!(status.success(), "jirau new com --sqlite deve ter sucesso");
 
-    assert!(
-        status.success(),
-        "jirau new com --sqlite e --amper deve ter sucesso"
-    );
-
-    let app_dir = temp.path().join("sql-amper-app");
-
-    // Amper verification
-    assert!(app_dir.join("android/module.yaml").exists());
-    assert!(app_dir.join("android/project.yaml").exists());
-    assert!(app_dir.join("android/amper").exists());
-
-    let module_yaml = std::fs::read_to_string(app_dir.join("android/module.yaml")).unwrap();
-    assert!(module_yaml.contains("namespace: \"com.test.sqlamper\""));
-
-    // SQLite verification
+    let app_dir = temp.path().join("sql-app");
     let core_cargo =
-        std::fs::read_to_string(app_dir.join("crates/sql-amper-app-core/Cargo.toml")).unwrap();
+        std::fs::read_to_string(app_dir.join("crates/sql-app-core/Cargo.toml")).unwrap();
     assert!(core_cargo.contains("rusqlite"));
-
-    let core_lib =
-        std::fs::read_to_string(app_dir.join("crates/sql-amper-app-core/src/lib.rs")).unwrap();
+    let core_lib = std::fs::read_to_string(app_dir.join("crates/sql-app-core/src/lib.rs")).unwrap();
     assert!(core_lib.contains("StorageEngine"));
-    assert!(core_lib.contains("kv_store"));
+    assert!(app_dir.join("android/gradlew").exists());
 
-    let jirau_toml = std::fs::read_to_string(app_dir.join("jirau.toml")).unwrap();
-    assert!(jirau_toml.contains("storage = \"sqlite\""));
-    assert!(jirau_toml.contains("android_build_system = \"amper\""));
+    // Amper (plugin Gradle descontinuado) é recusado com explicação, sem gerar nada.
+    let out = Command::new(jirau_bin)
+        .current_dir(temp.path())
+        .args([
+            "new",
+            "amper-app",
+            "--package",
+            "com.test.amper",
+            "--android",
+            "--amper",
+            "--non-interactive",
+        ])
+        .output()
+        .expect("Falha ao invocar jirau new --amper");
+    assert!(!out.status.success());
+    assert!(String::from_utf8_lossy(&out.stderr).contains("Amper"));
+    assert!(!temp.path().join("amper-app").exists());
 }
 
 #[test]
@@ -196,25 +197,54 @@ fn test_upgrade_three_way_merge() {
 
     let app_dir = temp.path().join("upgrade-test");
 
-    // 2. Simulate an older template version 0.1.0 in jirau.toml
+    // 2. Simula um projeto gerado por um template antigo: a base
+    //    (.jirau/template-base) registra o que aquele template gerou.
+    let base_dir = app_dir.join(".jirau/template-base");
+    assert!(
+        base_dir.join("Makefile").exists(),
+        "jirau new deve gravar a base"
+    );
+
     let config_path = app_dir.join("jirau.toml");
     let config_content = std::fs::read_to_string(&config_path).unwrap();
-    let old_config = config_content.replace(
-        "template_version = \"0.3.0\"",
-        "template_version = \"0.1.0\"",
-    );
-    std::fs::write(&config_path, old_config).unwrap();
+    let current_version = config_content
+        .lines()
+        .find(|l| l.starts_with("template_version"))
+        .unwrap()
+        .to_string();
+    std::fs::write(
+        &config_path,
+        config_content.replace(&current_version, "template_version = \"0.1.0\""),
+    )
+    .unwrap();
 
-    // 3. Simulate user modification in TESTING_STANDARD.md
+    // 2a. Makefile intocado pelo usuário, mas de um template antigo → atualiza.
+    let makefile = app_dir.join("Makefile");
+    let new_makefile = std::fs::read_to_string(&makefile).unwrap();
+    std::fs::write(&makefile, "# Makefile antigo\n").unwrap();
+    std::fs::write(base_dir.join("Makefile"), "# Makefile antigo\n").unwrap();
+
+    // 2b. Usuário customizou e o template não mudou o arquivo → preserva.
     let testing_md = app_dir.join("TESTING_STANDARD.md");
     let orig_md = std::fs::read_to_string(&testing_md).unwrap();
-    let user_md = format!(
-        "{}\n<!-- Linha customizada pelo desenvolvedor -->\n",
-        orig_md
-    );
-    std::fs::write(&testing_md, &user_md).unwrap();
+    std::fs::write(
+        &testing_md,
+        format!("{orig_md}\n<!-- Linha customizada pelo desenvolvedor -->\n"),
+    )
+    .unwrap();
 
-    // 4. Run jirau upgrade
+    // 2c. Ambos mudaram partes diferentes → 3-way merge limpo.
+    let gitignore = app_dir.join(".gitignore");
+    let template_gitignore = std::fs::read_to_string(&gitignore).unwrap();
+    let old_template_gitignore = template_gitignore.replace("Thumbs.db\n", "");
+    std::fs::write(base_dir.join(".gitignore"), &old_template_gitignore).unwrap();
+    std::fs::write(
+        &gitignore,
+        format!("# segredos locais\n.env\n\n{old_template_gitignore}"),
+    )
+    .unwrap();
+
+    // 3. Executa o upgrade
     let status = Command::new(jirau_bin)
         .current_dir(&app_dir)
         .arg("upgrade")
@@ -222,13 +252,26 @@ fn test_upgrade_three_way_merge() {
         .expect("Falha ao invocar jirau upgrade");
     assert!(status.success(), "jirau upgrade deve ter sucesso");
 
-    // 5. Verify template_version was bumped to 0.3.0
+    // 4. Versão atualizada
     let updated_config = std::fs::read_to_string(&config_path).unwrap();
-    assert!(updated_config.contains("template_version = \"0.3.0\""));
+    assert!(updated_config.contains(&current_version));
 
-    // 6. Verify user's custom line was preserved
-    let updated_md = std::fs::read_to_string(&testing_md).unwrap();
-    assert!(updated_md.contains("Linha customizada pelo desenvolvedor"));
+    assert_eq!(std::fs::read_to_string(&makefile).unwrap(), new_makefile);
+    assert!(
+        std::fs::read_to_string(&testing_md)
+            .unwrap()
+            .contains("Linha customizada pelo desenvolvedor")
+    );
+    let merged = std::fs::read_to_string(&gitignore).unwrap();
+    assert!(merged.contains(".env"), "customização do usuário mantida");
+    assert!(merged.contains("Thumbs.db"), "mudança do template aplicada");
+    assert!(!merged.contains("<<<<<<<"));
+
+    // 5. A base passa a ser o template atual (para o próximo upgrade).
+    assert_eq!(
+        std::fs::read_to_string(base_dir.join("Makefile")).unwrap(),
+        new_makefile
+    );
 }
 
 #[test]
@@ -262,24 +305,34 @@ fn test_ui_theme_and_ffi_lifecycle_tests() {
     let app_dir = temp.path().join("themed-app");
 
     // Android theme & lifecycle test files
-    assert!(app_dir
-        .join("android/app/src/main/java/com/test/themed/ui/theme/Color.kt")
-        .exists());
-    assert!(app_dir
-        .join("android/app/src/main/java/com/test/themed/ui/theme/Theme.kt")
-        .exists());
-    assert!(app_dir
-        .join("android/app/src/main/java/com/test/themed/ui/theme/Type.kt")
-        .exists());
-    assert!(app_dir
-        .join("android/app/src/androidTest/java/com/test/themed/NativeLifecycleTest.kt")
-        .exists());
+    assert!(
+        app_dir
+            .join("android/app/src/main/java/com/test/themed/ui/theme/Color.kt")
+            .exists()
+    );
+    assert!(
+        app_dir
+            .join("android/app/src/main/java/com/test/themed/ui/theme/Theme.kt")
+            .exists()
+    );
+    assert!(
+        app_dir
+            .join("android/app/src/main/java/com/test/themed/ui/theme/Type.kt")
+            .exists()
+    );
+    assert!(
+        app_dir
+            .join("android/app/src/androidTest/java/com/test/themed/NativeLifecycleTest.kt")
+            .exists()
+    );
 
     // iOS theme & lifecycle test files
     assert!(app_dir.join("ios/App/Sources/Theme.swift").exists());
-    assert!(app_dir
-        .join("ios/App/Tests/NativeLifecycleTests.swift")
-        .exists());
+    assert!(
+        app_dir
+            .join("ios/App/Tests/NativeLifecycleTests.swift")
+            .exists()
+    );
 
     // UniFFI Lifecycle Integration Test
     let ffi_test = app_dir.join("crates/themed-app-ffi/tests/lifecycle_integration_tests.rs");
@@ -360,15 +413,33 @@ fn test_vault_template_and_ci_workflow() {
         app_dir.join("android/app/src/main/java/com/test/vault/MainActivity.kt"),
     )
     .unwrap();
-    assert!(main_activity.contains("VaultViewModel"));
-    assert!(main_activity.contains("generateNewPassword"));
-    assert!(main_activity.contains("toggleFavorite"));
+    assert!(main_activity.contains("VaultScreen"));
+    assert!(
+        main_activity.contains("vm.loadSampleItems")
+            || main_activity.contains("vm::loadSampleItems")
+    );
+    let vault_core = std::fs::read_to_string(
+        app_dir.join("android/app/src/main/java/com/test/vault/VaultCore.kt"),
+    )
+    .unwrap();
+    // O app usa o motor Rust real, com a chave guardada no Android Keystore.
+    assert!(vault_core.contains("import com.test.vault.uniffi.NativeVaultEngine"));
+    assert!(vault_core.contains("NativeVaultEngine.open(path, key)"));
+    assert!(vault_core.contains("AndroidKeyStore"));
 
     // Vault-specific iOS file
     let content_view =
         std::fs::read_to_string(app_dir.join("ios/App/Sources/ContentView.swift")).unwrap();
     assert!(content_view.contains("VaultViewModel"));
-    assert!(content_view.contains("filteredItems"));
+    // A UI usa o motor Rust (SQLite + gerador) em vez de dados fixos em Swift.
+    assert!(content_view.contains("NativeVaultEngine.open(path: path, key: key)"));
+    assert!(content_view.contains("kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly"));
+    assert!(content_view.contains("generateSecurePassword(options:"));
+    assert!(content_view.contains("engine.listItems("));
+
+    let ios_tests =
+        std::fs::read_to_string(app_dir.join("ios/App/Tests/NativeLifecycleTests.swift")).unwrap();
+    assert!(ios_tests.contains("NativeVaultEngine.inMemory()"));
 
     // jirau.toml configuration check
     let jirau_toml = std::fs::read_to_string(app_dir.join("jirau.toml")).unwrap();

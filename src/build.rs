@@ -1,6 +1,7 @@
 use crate::config::JirauConfig;
 use crate::ui;
 use anyhow::{Context, Result};
+use rust_i18n::t;
 use std::path::Path;
 use std::process::Command;
 
@@ -15,7 +16,7 @@ impl ReleaseBuilder {
     ) -> Result<()> {
         ui::print_banner();
         let mode = if release { "RELEASE" } else { "DEBUG" };
-        ui::print_step(&format!("Iniciando build [{}]", mode));
+        ui::print_step(&t!("build.starting", mode = mode));
 
         let platforms_to_build: Vec<String> = match requested_platform {
             Some(p) => vec![p.to_lowercase()],
@@ -23,82 +24,28 @@ impl ReleaseBuilder {
         };
 
         let slug = config.app.name.to_lowercase().replace(['_', ' '], "-");
-        let ffi_pkg = format!("{}-ffi", slug);
 
-        // Android build
+        // Android build: APK com o núcleo Rust de todas as ABIs suportadas.
         if platforms_to_build.contains(&"android".to_string()) {
-            ui::print_step("Compilando binários nativos para Android (multi-ABI)...");
-            let jni_out = root_dir.join("android/app/src/main/jniLibs");
-
-            let mut args = vec![
-                "ndk",
-                "-t",
-                "arm64-v8a",
-                "-t",
-                "x86_64",
-                "-o",
-                jni_out.to_str().unwrap(),
-                "build",
-                "--package",
-                &ffi_pkg,
-            ];
-
-            if release {
-                args.push("--release");
-            }
-
-            let status = Command::new("cargo")
-                .current_dir(root_dir)
-                .args(&args)
-                .status()
-                .with_context(|| "Falha ao executar 'cargo ndk'")?;
-
-            if status.success() {
-                ui::print_success(
-                    "Bibliotecas nativas Android (.so) geradas com sucesso em jniLibs!",
-                );
-            } else {
-                ui::print_error("Falha na compilação dos binários nativos Android.");
-            }
+            let apk_dir = crate::android_pipeline::assemble(root_dir, release, &[])?;
+            ui::print_success(&t!("build.apk_ready", path = apk_dir.display()));
         }
 
-        // iOS build
+        // iOS build: núcleo Rust (device + simulador) → XCFramework + bindings Swift
         if platforms_to_build.contains(&"ios".to_string()) {
-            ui::print_step("Compilando binários nativos para iOS...");
-            if cfg!(target_os = "macos") {
-                let targets = if release {
-                    vec!["aarch64-apple-ios", "aarch64-apple-ios-sim"]
-                } else {
-                    vec!["aarch64-apple-ios-sim"]
-                };
-
-                for target in targets {
-                    let mut args = vec!["build", "--target", target, "--package", &ffi_pkg];
-                    if release {
-                        args.push("--release");
-                    }
-                    let status = Command::new("cargo")
-                        .current_dir(root_dir)
-                        .args(&args)
-                        .status();
-
-                    match status {
-                        Ok(s) if s.success() => {
-                            ui::print_success(&format!("Target iOS {} compilado.", target));
-                        }
-                        _ => {
-                            ui::print_warning(&format!("Falha ao compilar target iOS {}.", target));
-                        }
-                    }
-                }
-            } else {
-                ui::print_warning("Compilação final de XCFramework iOS requer ambiente macOS.");
-            }
+            ui::print_step(&t!("build.ios_xcframework"));
+            crate::ios_pipeline::build_ffi(root_dir, release)?;
+            crate::ios_pipeline::generate_xcode_project(root_dir)?;
+            ui::print_success(&t!(
+                "build.ios_ready",
+                lib = slug.replace('-', "_"),
+                project = crate::ios_pipeline::IosNames::from_config(config).pascal_name
+            ));
         }
 
         // Desktop build (Rune UI)
         if platforms_to_build.contains(&"desktop".to_string()) {
-            ui::print_step("Compilando binário do aplicativo Desktop (Rune UI)...");
+            ui::print_step(&t!("build.desktop_compiling"));
             let desktop_pkg = format!("{}-desktop", slug);
 
             let mut args = vec!["build", "--package", &desktop_pkg];
@@ -110,7 +57,7 @@ impl ReleaseBuilder {
                 .current_dir(root_dir)
                 .args(&args)
                 .status()
-                .with_context(|| format!("Falha ao compilar {}", desktop_pkg))?;
+                .with_context(|| t!("build.compile_failed", pkg = desktop_pkg).into_owned())?;
 
             if status.success() {
                 let bin_path = if release {
@@ -118,16 +65,13 @@ impl ReleaseBuilder {
                 } else {
                     format!("target/debug/{}", desktop_pkg)
                 };
-                ui::print_success(&format!(
-                    "Binário Desktop gerado com sucesso em: {}",
-                    bin_path
-                ));
+                ui::print_success(&t!("build.desktop_ready", path = bin_path));
             } else {
-                ui::print_error("Falha na compilação do binário Desktop.");
+                anyhow::bail!("{}", t!("build.desktop_failed"));
             }
         }
 
-        ui::print_success("Processo de build finalizado.");
+        ui::print_success(&t!("build.done"));
         Ok(())
     }
 }

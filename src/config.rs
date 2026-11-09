@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -138,15 +139,17 @@ impl JirauConfig {
     }
 
     pub fn find_in_current_or_parent() -> Result<(PathBuf, Self)> {
-        let mut curr =
-            std::env::current_dir().context("Não foi possível obter o diretório atual")?;
+        let mut curr = std::env::current_dir()
+            .with_context(|| t!("config.current_dir_failed").into_owned())?;
         loop {
             let candidate = curr.join(CONFIG_FILE_NAME);
             if candidate.exists() {
-                let content = fs::read_to_string(&candidate)
-                    .with_context(|| format!("Falha ao ler {}", candidate.display()))?;
-                let config: Self = toml::from_str(&content)
-                    .with_context(|| format!("Falha ao parsear {}", candidate.display()))?;
+                let content = fs::read_to_string(&candidate).with_context(|| {
+                    t!("config.read_failed", path = candidate.display()).into_owned()
+                })?;
+                let config: Self = toml::from_str(&content).with_context(|| {
+                    t!("config.parse_failed", path = candidate.display()).into_owned()
+                })?;
                 return Ok((curr, config));
             }
 
@@ -154,19 +157,16 @@ impl JirauConfig {
                 break;
             }
         }
-        anyhow::bail!(
-            "Nenhum arquivo '{}' foi encontrado no diretório atual nem nos superiores.\nExecute este comando na raiz de um projeto jirau ou use 'jirau new <nome>' para criar um novo projeto.",
-            CONFIG_FILE_NAME
-        );
+        anyhow::bail!("{}", t!("config.not_found", file = CONFIG_FILE_NAME));
     }
 
     #[allow(dead_code)]
     pub fn write_to_dir(&self, dir: &Path) -> Result<()> {
         let target = dir.join(CONFIG_FILE_NAME);
-        let content =
-            toml::to_string_pretty(self).context("Falha ao serializar configuração jirau.toml")?;
+        let content = toml::to_string_pretty(self)
+            .with_context(|| t!("config.serialize_failed").into_owned())?;
         fs::write(&target, content)
-            .with_context(|| format!("Falha ao escrever {}", target.display()))?;
+            .with_context(|| t!("config.write_failed", path = target.display()).into_owned())?;
         Ok(())
     }
 }

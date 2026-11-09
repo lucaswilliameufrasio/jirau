@@ -1,0 +1,71 @@
+# Mensagens de android_pipeline.rs (FFI, Gradle, adb).
+_version: 2
+android_pipeline.upgrade_hint:
+  en: "Projects created before this version do not have the Rust core Android pipeline: run 'jirau upgrade' to add it."
+  pt-BR: "Projetos criados antes desta versão não têm o pipeline Android do núcleo Rust: rode 'jirau upgrade' para adicioná-lo."
+android_pipeline.gradlew_missing:
+  en: "Gradle Wrapper not found in android/. %{hint}"
+  pt-BR: "Gradle Wrapper não encontrado em android/. %{hint}"
+android_pipeline.script_missing:
+  en: "'%{script}' not found. %{hint}"
+  pt-BR: "'%{script}' não encontrado. %{hint}"
+android_pipeline.abi_unreadable:
+  en: "Could not read the ABI of device %{serial}."
+  pt-BR: "Não foi possível ler a ABI do dispositivo %{serial}."
+android_pipeline.ffi_building:
+  en: "Building the Rust core for Android (%{abis}, %{profile}) and generating Kotlin bindings..."
+  pt-BR: "Compilando núcleo Rust para Android (%{abis}, %{profile}) e gerando bindings Kotlin..."
+android_pipeline.ffi_ready:
+  en: ".so libraries + Kotlin bindings ready!"
+  pt-BR: "Bibliotecas .so + bindings Kotlin prontos!"
+android_pipeline.ffi_failed:
+  en: "The Android FFI pipeline failed."
+  pt-BR: "Falha no pipeline FFI do Android."
+android_pipeline.ffi_step:
+  en: "Android FFI pipeline (scripts/build-android-ffi.sh)"
+  pt-BR: "Pipeline FFI do Android (scripts/build-android-ffi.sh)"
+android_pipeline.apk_building:
+  en: "Building %{variant} APK (Gradle + Rust core)..."
+  pt-BR: "Gerando APK %{variant} (Gradle + núcleo Rust)..."
+android_pipeline.apk_built:
+  en: "APK built!"
+  pt-BR: "APK gerado!"
+android_pipeline.apk_failed:
+  en: "Failed to build the APK."
+  pt-BR: "Falha ao gerar o APK."
+android_pipeline.target_device:
+  en: "Target device: %{model} [%{serial}] (ABI: %{abi})"
+  pt-BR: "Dispositivo alvo: %{model} [%{serial}] (ABI: %{abi})"
+android_pipeline.installing:
+  en: "Building Rust core + Android app and installing (Gradle installDebug)..."
+  pt-BR: "Compilando núcleo Rust + app Android e instalando (Gradle installDebug)..."
+android_pipeline.installed:
+  en: "APK installed on the device!"
+  pt-BR: "APK instalado no dispositivo!"
+android_pipeline.install_failed:
+  en: "Failed to build/install the Android app."
+  pt-BR: "Falha ao compilar/instalar o app Android."
+android_pipeline.launch_failed:
+  en: "Failed to open %{component}: %{output}"
+  pt-BR: "Falha ao abrir %{component}: %{output}"
+android_pipeline.app_running:
+  en: "App %{package} running!"
+  pt-BR: "App %{package} em execução!"
+android_pipeline.no_instrumented_tests:
+  en: "No instrumented tests were run (%{path})."
+  pt-BR: "Nenhum teste instrumentado foi executado (%{path})."
+android_pipeline.tests_summary:
+  en: "%{tests} tests, %{failures} failures — %{model}"
+  pt-BR: "%{tests} testes, %{failures} falhas — %{model}"
+android_pipeline.watching:
+  en: "Watching for changes in 'crates/' and 'android/app/src/'... Press Ctrl+C to quit.\n"
+  pt-BR: "Observando alterações em 'crates/' e 'android/app/src/'... Pressione Ctrl+C para encerrar.\n"
+android_pipeline.watcher_error:
+  en: "File watcher error: %{error}"
+  pt-BR: "Erro no monitor de arquivos: %{error}"
+android_pipeline.change_detected:
+  en: "Change detected in: %{paths}"
+  pt-BR: "Alteração detectada em: %{paths}"
+android_pipeline.app_updated:
+  en: "App updated in %{secs}s.\n"
+  pt-BR: "App atualizado em %{secs}s.\n"

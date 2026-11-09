@@ -1,43 +1,31 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
 }
 
 android {
     namespace = "com.example.mobile"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.example.mobile"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 37
         versionCode = 1
         versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        ndk {
-            abiFilters += listOf("arm64-v8a", "x86_64")
-        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
         }
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    kotlinOptions {
-        jvmTarget = "17"
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
     buildFeatures {
@@ -46,33 +34,38 @@ android {
 
     sourceSets {
         getByName("main") {
-            java.srcDirs("src/main/java", "build/generated/uniffi")
-            jniLibs.srcDirs("src/main/jniLibs")
+            // Bindings Kotlin gerados pelo UniFFI (scripts/build-android-ffi.sh)
+            kotlin.directories += "build/generated/uniffi"
+            jniLibs.directories += "src/main/jniLibs"
         }
     }
 }
 
-// Task inteligente do cargo-ndk com inputs e outputs mapeados para o Gradle Cache
-tasks.register<Exec>("buildRustCore") {
-    description = "Compila os crates Rust para Android via cargo-ndk"
-    workingDir = file("../../")
+// Núcleo Rust: scripts/build-android-ffi.sh compila as .so (cargo-ndk) e gera os
+// bindings Kotlin antes de cada build. ABIs: -Pjirau.rustAbis=x86_64 (a CLI
+// passa só a ABI do dispositivo alvo para acelerar o ciclo).
+val rustAbis = providers.gradleProperty("jirau.rustAbis").orElse("arm64-v8a,x86_64")
+val repoRoot = rootProject.layout.projectDirectory.dir("..").asFile
 
-    inputs.dir("../../crates")
-    inputs.file("../../Cargo.lock").optional()
-    inputs.file("../../Cargo.toml")
-    outputs.dir("src/main/jniLibs")
+fun registerRustCoreTask(taskName: String, profile: String) =
+    tasks.register<Exec>(taskName) {
+        group = "rust"
+        description = "Compila o núcleo Rust ($profile) e gera os bindings Kotlin"
+        workingDir = repoRoot
+        commandLine(
+            listOf("bash", "scripts/build-android-ffi.sh", profile) +
+                rustAbis.get().split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        )
+    }
 
-    commandLine(
-        "cargo", "ndk",
-        "-t", "arm64-v8a",
-        "-t", "x86_64",
-        "-o", "android/app/src/main/jniLibs",
-        "build", "--package", "mobile-gradle-starter-ffi"
-    )
-}
+val buildRustCoreDebug = registerRustCoreTask("buildRustCoreDebug", "debug")
+val buildRustCoreRelease = registerRustCoreTask("buildRustCoreRelease", "release")
 
-tasks.named("preBuild") {
-    dependsOn("buildRustCore")
+tasks.configureEach {
+    when (name) {
+        "preDebugBuild" -> dependsOn(buildRustCoreDebug)
+        "preReleaseBuild" -> dependsOn(buildRustCoreRelease)
+    }
 }
 
 dependencies {
@@ -85,8 +78,16 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation(libs.net.java.dev.jna)
+    // UniFFI usa JNA para chamar a biblioteca Rust; o AAR traz o libjnidispatch.so.
+    implementation("net.java.dev.jna:jna:${libs.versions.jna.get()}@aar")
     implementation(libs.kotlinx.coroutines.core)
 
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.ui.test.junit4)
+
     debugImplementation(libs.androidx.ui.tooling)
+    debugImplementation(libs.androidx.ui.test.manifest)
 }

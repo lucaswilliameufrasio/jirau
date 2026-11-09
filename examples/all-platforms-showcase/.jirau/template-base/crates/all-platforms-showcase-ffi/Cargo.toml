@@ -1,0 +1,12 @@
+[package]
+name = "all-platforms-showcase-ffi"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "staticlib", "rlib"]
+name = "all_platforms_showcase_ffi"
+
+[dependencies]
+all-platforms-showcase-core = { path = "../all-platforms-showcase-core" }
+uniffi = { version = "0.32", features = ["cli"] }

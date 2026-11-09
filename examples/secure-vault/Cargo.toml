@@ -4,7 +4,7 @@ members = [
     "crates/secure-vault-ffi",
     "crates/secure-vault-desktop",
 ]
-resolver = "2"
+resolver = "3"
 
 [profile.dev.package."*"]
 opt-level = 2

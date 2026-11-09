@@ -1,0 +1,13 @@
+[package]
+name = "desktop-first-sqlite-desktop"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "desktop-first-sqlite-desktop"
+path = "src/main.rs"
+test = false
+
+[dependencies]
+desktop-first-sqlite-core = { path = "../desktop-first-sqlite-core" }
+rune = { git = "https://github.com/anomalyco/rune" }

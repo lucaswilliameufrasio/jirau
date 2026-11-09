@@ -1,9 +1,9 @@
-use std::sync::Mutex;
 use all_platforms_showcase_core as core;
+use std::sync::Mutex;
 
 uniffi::setup_scaffolding!();
 
-#[derive(uniffi::Record)]
+#[derive(uniffi::Record, Debug, Clone, PartialEq, Eq)]
 pub struct NativeAppState {
     pub counter: i32,
     pub title: String,
@@ -22,7 +22,7 @@ impl From<core::AppState> for NativeAppState {
 pub enum NativeError {
     NegativeValue,
     EmptyTitle,
-    StorageError { message: String },
+    StorageError { detail: String },
 }
 
 impl From<core::CoreError> for NativeError {
@@ -30,7 +30,7 @@ impl From<core::CoreError> for NativeError {
         match err {
             core::CoreError::NegativeValue => NativeError::NegativeValue,
             core::CoreError::EmptyTitle => NativeError::EmptyTitle,
-            core::CoreError::StorageError(msg) => NativeError::StorageError { message: msg },
+            core::CoreError::StorageError(msg) => NativeError::StorageError { detail: msg },
         }
     }
 }
@@ -46,6 +46,12 @@ impl std::error::Error for NativeError {}
 #[derive(uniffi::Object)]
 pub struct AppEngine {
     inner: Mutex<core::StateEngine>,
+}
+
+impl Default for AppEngine {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[uniffi::export]
@@ -69,12 +75,18 @@ impl AppEngine {
 
     pub fn decrement(&self) -> Result<NativeAppState, NativeError> {
         let mut engine = self.inner.lock().unwrap();
-        engine.decrement().map(Into::into).map_err(NativeError::from)
+        engine
+            .decrement()
+            .map(Into::into)
+            .map_err(NativeError::from)
     }
 
     pub fn update_title(&self, new_title: String) -> Result<NativeAppState, NativeError> {
         let mut engine = self.inner.lock().unwrap();
-        engine.update_title(&new_title).map(Into::into).map_err(NativeError::from)
+        engine
+            .update_title(&new_title)
+            .map(Into::into)
+            .map_err(NativeError::from)
     }
 }
 
@@ -94,13 +106,17 @@ impl NativeStorage {
     #[uniffi::constructor]
     pub fn in_memory() -> Result<Self, NativeError> {
         let engine = core::StorageEngine::in_memory().map_err(NativeError::from)?;
-        Ok(Self { inner: Mutex::new(engine) })
+        Ok(Self {
+            inner: Mutex::new(engine),
+        })
     }
 
     #[uniffi::constructor]
     pub fn open(path: String) -> Result<Self, NativeError> {
         let engine = core::StorageEngine::open(&path).map_err(NativeError::from)?;
-        Ok(Self { inner: Mutex::new(engine) })
+        Ok(Self {
+            inner: Mutex::new(engine),
+        })
     }
 
     pub fn set_item(&self, key: String, value: String) -> Result<(), NativeError> {
@@ -116,7 +132,10 @@ impl NativeStorage {
     pub fn list_items(&self) -> Result<Vec<NativeStorageItem>, NativeError> {
         let engine = self.inner.lock().unwrap();
         let items = engine.list_items().map_err(NativeError::from)?;
-        Ok(items.into_iter().map(|(k, v)| NativeStorageItem { key: k, value: v }).collect())
+        Ok(items
+            .into_iter()
+            .map(|(k, v)| NativeStorageItem { key: k, value: v })
+            .collect())
     }
 
     pub fn delete_item(&self, key: String) -> Result<bool, NativeError> {

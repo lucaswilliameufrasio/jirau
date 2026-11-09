@@ -1,9 +1,9 @@
-use std::sync::Mutex;
 use mobile_gradle_starter_core as core;
+use std::sync::Mutex;
 
 uniffi::setup_scaffolding!();
 
-#[derive(uniffi::Record)]
+#[derive(uniffi::Record, Debug, Clone, PartialEq, Eq)]
 pub struct NativeAppState {
     pub counter: i32,
     pub title: String,
@@ -22,7 +22,6 @@ impl From<core::AppState> for NativeAppState {
 pub enum NativeError {
     NegativeValue,
     EmptyTitle,
-
 }
 
 impl From<core::CoreError> for NativeError {
@@ -30,7 +29,6 @@ impl From<core::CoreError> for NativeError {
         match err {
             core::CoreError::NegativeValue => NativeError::NegativeValue,
             core::CoreError::EmptyTitle => NativeError::EmptyTitle,
-
         }
     }
 }
@@ -46,6 +44,12 @@ impl std::error::Error for NativeError {}
 #[derive(uniffi::Object)]
 pub struct AppEngine {
     inner: Mutex<core::StateEngine>,
+}
+
+impl Default for AppEngine {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[uniffi::export]
@@ -69,12 +73,18 @@ impl AppEngine {
 
     pub fn decrement(&self) -> Result<NativeAppState, NativeError> {
         let mut engine = self.inner.lock().unwrap();
-        engine.decrement().map(Into::into).map_err(NativeError::from)
+        engine
+            .decrement()
+            .map(Into::into)
+            .map_err(NativeError::from)
     }
 
     pub fn update_title(&self, new_title: String) -> Result<NativeAppState, NativeError> {
         let mut engine = self.inner.lock().unwrap();
-        engine.update_title(&new_title).map(Into::into).map_err(NativeError::from)
+        engine
+            .update_title(&new_title)
+            .map(Into::into)
+            .map_err(NativeError::from)
     }
 }
 

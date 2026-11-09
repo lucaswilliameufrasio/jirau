@@ -12,6 +12,7 @@ android/.idea/
 android/*.iml
 android/*/*.iml
 android/.cxx/
+android/.kotlin/
 android/app/build/generated/uniffi/
 android/app/src/main/jniLibs/
 

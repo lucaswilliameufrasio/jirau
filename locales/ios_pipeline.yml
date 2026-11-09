@@ -1,0 +1,74 @@
+# Mensagens de ios_pipeline.rs (FFI, XcodeGen, xcodebuild, simulador).
+_version: 2
+ios_pipeline.requires_macos:
+  en: "The iOS pipeline requires macOS with Xcode installed."
+  pt-BR: "O pipeline iOS requer macOS com Xcode instalado."
+ios_pipeline.script_missing:
+  en: "'%{script}' not found. Projects created before this version do not have the Rust core iOS pipeline: run 'jirau upgrade --force' to add it."
+  pt-BR: "'%{script}' não encontrado. Projetos criados antes desta versão não têm o pipeline iOS do núcleo Rust: rode 'jirau upgrade --force' para adicioná-lo."
+ios_pipeline.ffi_building:
+  en: "Building the Rust core for iOS and generating Swift bindings (%{profile})..."
+  pt-BR: "Compilando núcleo Rust para iOS e gerando bindings Swift (%{profile})..."
+ios_pipeline.ffi_step:
+  en: "iOS FFI pipeline (scripts/build-ios-ffi.sh)"
+  pt-BR: "Pipeline FFI do iOS (scripts/build-ios-ffi.sh)"
+ios_pipeline.ffi_ready:
+  en: "Rust core + Swift bindings + XCFramework ready!"
+  pt-BR: "Núcleo Rust + bindings Swift + XCFramework prontos!"
+ios_pipeline.ffi_failed:
+  en: "The iOS FFI pipeline failed."
+  pt-BR: "Falha no pipeline FFI do iOS."
+ios_pipeline.project_yml_missing:
+  en: "ios/project.yml not found."
+  pt-BR: "ios/project.yml não encontrado."
+ios_pipeline.xcodegen_missing:
+  en: "XcodeGen not found. Install it with: brew install xcodegen"
+  pt-BR: "XcodeGen não encontrado. Instale com: brew install xcodegen"
+ios_pipeline.xcodegen_running:
+  en: "Regenerating the Xcode project with XcodeGen..."
+  pt-BR: "Regerando projeto Xcode via XcodeGen..."
+ios_pipeline.xcodegen_done:
+  en: "Xcode project updated!"
+  pt-BR: "Projeto Xcode atualizado!"
+ios_pipeline.xcodegen_failed:
+  en: "Failed to generate the Xcode project."
+  pt-BR: "Falha ao gerar o projeto Xcode."
+ios_pipeline.app_building:
+  en: "Building the iOS app (xcodebuild)..."
+  pt-BR: "Compilando app iOS (xcodebuild)..."
+ios_pipeline.app_build_failed:
+  en: "Failed to build the iOS app."
+  pt-BR: "Falha ao compilar o app iOS."
+ios_pipeline.app_missing_after_build:
+  en: "The build finished without producing the .app."
+  pt-BR: "Build terminou sem gerar o .app."
+ios_pipeline.app_not_found:
+  en: "App not found at %{path}"
+  pt-BR: "App não encontrado em %{path}"
+ios_pipeline.app_built:
+  en: "iOS app built!"
+  pt-BR: "App iOS compilado!"
+ios_pipeline.booting_simulator:
+  en: "Booting simulator %{name}..."
+  pt-BR: "Inicializando simulador %{name}..."
+ios_pipeline.installing:
+  en: "Installing and opening the app on the simulator..."
+  pt-BR: "Instalando e abrindo o app no simulador..."
+ios_pipeline.app_running:
+  en: "App %{bundle_id} running!"
+  pt-BR: "App %{bundle_id} em execução!"
+ios_pipeline.install_failed:
+  en: "Failed to install/open the app."
+  pt-BR: "Falha ao instalar/abrir o app."
+ios_pipeline.watching:
+  en: "Watching for changes in 'crates/' and 'ios/App/'... Press Ctrl+C to quit.\n"
+  pt-BR: "Observando alterações em 'crates/' e 'ios/App/'... Pressione Ctrl+C para encerrar.\n"
+ios_pipeline.watcher_error:
+  en: "File watcher error: %{error}"
+  pt-BR: "Erro no monitor de arquivos: %{error}"
+ios_pipeline.change_detected:
+  en: "Change detected in: %{paths}"
+  pt-BR: "Alteração detectada em: %{paths}"
+ios_pipeline.app_updated:
+  en: "App updated in %{secs}s.\n"
+  pt-BR: "App atualizado em %{secs}s.\n"

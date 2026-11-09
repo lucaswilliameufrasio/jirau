@@ -5,6 +5,7 @@ pub mod root;
 pub mod rust_core;
 pub mod rust_ffi;
 pub mod vault;
+pub mod versions;
 
 pub struct TemplateContext {
     pub name: String,
@@ -20,13 +21,20 @@ pub struct TemplateContext {
     pub plugins: Vec<String>,         // ["logger", "analytics"]
     pub app_template: String,         // "starter" | "vault"
     pub ci_workflow: bool,
-    pub template_version: String, // "0.3.0"
+    pub template_version: String, // ex: "0.4.0"
 }
 
 impl TemplateContext {
     #[allow(dead_code)]
     pub fn new(name: &str, package_id: &str, platforms: Vec<String>) -> Self {
-        Self::with_options(name, package_id, platforms, "none", "gradle", "0.3.0")
+        Self::with_options(
+            name,
+            package_id,
+            platforms,
+            "none",
+            "gradle",
+            crate::upgrade::CURRENT_TEMPLATE_VERSION,
+        )
     }
 
     pub fn with_options(

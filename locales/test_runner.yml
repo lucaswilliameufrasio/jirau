@@ -1,0 +1,92 @@
+# Mensagens de `jirau test` (test_runner.rs).
+_version: 2
+test_runner.title:
+  en: "🧪 Jirau Cross-Platform Test Suite"
+  pt-BR: "🧪 Suíte de Testes Jirau Multiplataforma"
+test_runner.summary_title:
+  en: "Test Summary:"
+  pt-BR: "Resumo dos Testes:"
+test_runner.all_passed:
+  en: "All tests passed! 🎉"
+  pt-BR: "Todos os testes passaram com sucesso! 🎉"
+test_runner.some_failed:
+  en: "One or more test suites failed."
+  pt-BR: "Falha em uma ou mais suítes de testes."
+test_runner.core_running:
+  en: "Running Rust Core unit tests on the host..."
+  pt-BR: "Executando testes unitários do Rust Core no host..."
+test_runner.core_done:
+  en: "Rust Core tests finished in %{secs}s!"
+  pt-BR: "Testes do Rust Core concluídos em %{secs}s!"
+test_runner.core_details:
+  en: "Pure unit tests run on the host (< 500ms)"
+  pt-BR: "Testes unitários puros executados no host (< 500ms)"
+test_runner.core_failed:
+  en: "Rust Core tests failed."
+  pt-BR: "Falha nos testes do Rust Core."
+test_runner.core_spawn_failed:
+  en: "Error invoking cargo test."
+  pt-BR: "Erro ao invocar cargo test."
+test_runner.ffi_running:
+  en: "Running FFI integration tests (%{pkg})..."
+  pt-BR: "Executando testes de integração FFI (%{pkg})..."
+test_runner.ffi_done:
+  en: "FFI tests finished in %{secs}s!"
+  pt-BR: "Testes FFI concluídos em %{secs}s!"
+test_runner.ffi_name:
+  en: "FFI Layer (UniFFI)"
+  pt-BR: "Camada FFI (UniFFI)"
+test_runner.ffi_details:
+  en: "Lifecycle, type serialization and concurrency validated"
+  pt-BR: "Lifecycle, serialização de tipos e concorrência validados"
+test_runner.ffi_failed:
+  en: "FFI layer tests failed."
+  pt-BR: "Falha nos testes da camada FFI."
+test_runner.ffi_spawn_failed:
+  en: "Error invoking FFI tests."
+  pt-BR: "Erro ao invocar testes FFI."
+test_runner.android_no_device:
+  en: "No Android device/emulator connected (adb devices)."
+  pt-BR: "Nenhum dispositivo/emulador Android conectado (adb devices)."
+test_runner.android_running:
+  en: "Running instrumented tests on %{model} (%{serial})..."
+  pt-BR: "Executando testes instrumentados em %{model} (%{serial})..."
+test_runner.android_done:
+  en: "Android tests finished!"
+  pt-BR: "Testes Android concluídos!"
+test_runner.android_failed:
+  en: "Android tests failed."
+  pt-BR: "Falha nos testes Android."
+test_runner.ios_skipped:
+  en: "Skipped (running on Linux; iOS tests require macOS)"
+  pt-BR: "Ignorado (executando em Linux; testes iOS requerem macOS)"
+test_runner.ios_no_simulator:
+  en: "No iOS simulator available"
+  pt-BR: "Nenhum simulador iOS disponível"
+test_runner.ios_running:
+  en: "Running XCTest tests on simulator %{name}..."
+  pt-BR: "Executando testes XCTest no simulador %{name}..."
+test_runner.ios_done:
+  en: "iOS tests finished in %{secs}s!"
+  pt-BR: "Testes iOS concluídos em %{secs}s!"
+test_runner.ios_failed:
+  en: "iOS tests failed."
+  pt-BR: "Testes iOS falharam."
+test_runner.ios_spawn_failed:
+  en: "Error invoking xcodebuild."
+  pt-BR: "Erro ao invocar xcodebuild."
+test_runner.desktop_running:
+  en: "Checking the Desktop build (%{pkg})..."
+  pt-BR: "Verificando compilação do Desktop (%{pkg})..."
+test_runner.desktop_done:
+  en: "Desktop validated in %{secs}s!"
+  pt-BR: "Desktop validado em %{secs}s!"
+test_runner.desktop_details:
+  en: "Desktop crate compiles and Rune typings are correct"
+  pt-BR: "Crate desktop compila e tipagens Rune estão corretas"
+test_runner.desktop_failed:
+  en: "Desktop validation failed."
+  pt-BR: "Falha na validação do Desktop."
+test_runner.desktop_spawn_failed:
+  en: "Error checking desktop."
+  pt-BR: "Erro ao checar desktop."

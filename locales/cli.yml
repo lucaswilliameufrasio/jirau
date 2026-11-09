@@ -1,0 +1,125 @@
+# Textos de ajuda da CLI (clap). Chave: cli.<subcomando>.<argumento>.
+_version: 2
+cli.about:
+  en: "🪵 Native cross-platform scaffold CLI: Rust + Android (Compose) + iOS (SwiftUI)"
+  pt-BR: "🪵 CLI de scaffold nativo multiplataforma: Rust + Android (Compose) + iOS (SwiftUI)"
+cli.long_about:
+  en: "Jirau is a Flutter-inspired CLI (create, doctor, run) that generates and operates projects with a shared Rust core and 100% native UIs in Jetpack Compose and SwiftUI via UniFFI."
+  pt-BR: "Jirau é uma CLI inspirada no ecossistema Flutter (create, doctor, run) que gera e opera projetos com núcleo compartilhado em Rust e UIs 100% nativas em Jetpack Compose e SwiftUI via UniFFI."
+cli.lang:
+  en: "Language: en or pt-BR (default: JIRAU_LANG or the system locale)"
+  pt-BR: "Idioma: en ou pt-BR (padrão: JIRAU_LANG ou o idioma do sistema)"
+cli.new.about:
+  en: "Creates a new project from the native template"
+  pt-BR: "Cria um novo projeto a partir do template nativo"
+cli.new.name:
+  en: "App/project name"
+  pt-BR: "Nome do aplicativo/projeto"
+cli.new.package:
+  en: "Package ID / Bundle Identifier (e.g. com.example.myapp)"
+  pt-BR: "Package ID / Bundle Identifier (ex: com.exemplo.meuapp)"
+cli.new.android:
+  en: "Include Android support"
+  pt-BR: "Inclui suporte para Android"
+cli.new.ios:
+  en: "Include iOS support"
+  pt-BR: "Inclui suporte para iOS"
+cli.new.desktop:
+  en: "Include Desktop support (Rust UI with Rune)"
+  pt-BR: "Inclui suporte para Desktop (UI em Rust com Rune)"
+cli.new.storage:
+  en: "Local persistence layer (none, sqlite)"
+  pt-BR: "Camada de persistência local (none, sqlite)"
+cli.new.sqlite:
+  en: "Enable embedded SQLite via rusqlite"
+  pt-BR: "Ativa SQLite embutido via rusqlite"
+cli.new.android_build_system:
+  en: "Android build system (only gradle; amper is no longer supported)"
+  pt-BR: "Sistema de build do Android (apenas gradle; amper não é mais suportado)"
+cli.new.amper:
+  en: "Deprecated: JetBrains Amper is no longer supported (the command fails explaining why)"
+  pt-BR: "Obsoleto: o JetBrains Amper não é mais suportado (o comando falha explicando o motivo)"
+cli.new.theme:
+  en: "Initial UI theme (default, material3-extended, minimal)"
+  pt-BR: "Tema de UI inicial (default, material3-extended, minimal)"
+cli.new.plugin:
+  en: "Optional architecture plugins (e.g. --plugin logger)"
+  pt-BR: "Plugins opcionais de arquitetura (ex: --plugin logger)"
+cli.new.template:
+  en: "App template (starter, vault)"
+  pt-BR: "Template da aplicação (starter, vault)"
+cli.new.ci:
+  en: "Generate a GitHub Actions CI workflow (.github/workflows/ci.yml)"
+  pt-BR: "Gera workflow de CI/CD para GitHub Actions (.github/workflows/ci.yml)"
+cli.new.non_interactive:
+  en: "Never prompt (use defaults for missing values)"
+  pt-BR: "Não pergunta nada de forma interativa (usa padrões para valores ausentes)"
+cli.run.about:
+  en: "Runs the app on the selected device or simulator"
+  pt-BR: "Executa o aplicativo no dispositivo ou simulador selecionado"
+cli.run.platform:
+  en: "Target platform (android, ios, desktop)"
+  pt-BR: "Plataforma alvo (android, ios, desktop)"
+cli.run.device:
+  en: "Device/emulator ID or serial (skips selection)"
+  pt-BR: "ID ou serial do dispositivo/emulador (pula a seleção)"
+cli.run.no_watch:
+  en: "Disable watch mode (no redeploy on code changes)"
+  pt-BR: "Desativa o modo watch (sem reimplantar a cada alteração)"
+cli.test.about:
+  en: "Runs unit, integration and on-device tests"
+  pt-BR: "Executa testes unitários, de integração e no dispositivo"
+cli.test.target:
+  en: "Test target (core, ffi, android, ios, desktop, all)"
+  pt-BR: "Alvo de teste (core, ffi, android, ios, desktop, all)"
+cli.test.all:
+  en: "Run every suite on every available platform"
+  pt-BR: "Executa todas as suítes em todas as plataformas disponíveis"
+cli.doctor.about:
+  en: "Diagnoses the development environment (Rust, Android SDK/NDK, Xcode, etc.)"
+  pt-BR: "Diagnostica o ambiente de desenvolvimento (Rust, Android SDK/NDK, Xcode, etc.)"
+cli.doctor.json:
+  en: "Print the diagnosis as JSON (ideal for CI)"
+  pt-BR: "Exporta o diagnóstico em JSON (ideal para CI)"
+cli.doctor.profile:
+  en: "Profile the Gradle build (--profile) to find slow steps"
+  pt-BR: "Faz profiling do build Gradle (--profile) para achar gargalos"
+cli.dev.about:
+  en: "Fast development loop (build, install and redeploy on change)"
+  pt-BR: "Ciclo de desenvolvimento rápido (compila, instala e reimplanta a cada alteração)"
+cli.dev.platform:
+  en: "Target platform (android, ios, desktop)"
+  pt-BR: "Plataforma alvo (android, ios, desktop)"
+cli.dev.no_watch:
+  en: "Disable watch mode (no redeploy on code changes)"
+  pt-BR: "Desativa o modo watch (sem reimplantar a cada alteração)"
+cli.bindings.about:
+  en: "Regenerates the Kotlin and Swift bindings from the UniFFI annotations"
+  pt-BR: "Regera os bindings Kotlin e Swift a partir das anotações UniFFI"
+cli.bindings.platform:
+  en: "Platform (android, ios; omit for both)"
+  pt-BR: "Plataforma (android, ios; omita para ambas)"
+cli.build.about:
+  en: "Builds final artifacts (multi-ABI APK for Android, XCFramework for iOS)"
+  pt-BR: "Compila os artefatos finais (APK multi-ABI no Android, XCFramework no iOS)"
+cli.build.platform:
+  en: "Target platform (android, ios, desktop; omit for all)"
+  pt-BR: "Plataforma alvo (android, ios, desktop; omita para todas)"
+cli.build.release:
+  en: "Optimized release build"
+  pt-BR: "Gera compilação otimizada de release"
+cli.add.about:
+  en: "Adds a platform to an existing project (e.g. jirau add desktop)"
+  pt-BR: "Adiciona uma plataforma a um projeto existente (ex: jirau add desktop)"
+cli.add.platform:
+  en: "Platform to add (desktop, android, ios)"
+  pt-BR: "Plataforma para adicionar (desktop, android, ios)"
+cli.upgrade.about:
+  en: "Updates the project to the current template via 3-way merge"
+  pt-BR: "Atualiza o projeto para o template atual via 3-way merge"
+cli.upgrade.force:
+  en: "Run even if the project is already on the latest template"
+  pt-BR: "Executa mesmo que o projeto já esteja no template mais recente"
+cli.upgrade.dry_run:
+  en: "Show what would change without writing anything"
+  pt-BR: "Mostra o que mudaria sem gravar nada"

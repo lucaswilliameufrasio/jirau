@@ -3,6 +3,7 @@ use crate::ui;
 use anyhow::{Context, Result};
 use colored::*;
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use rust_i18n::t;
 use std::path::Path;
 use std::process::Command;
 use std::sync::mpsc::channel;
@@ -25,19 +26,16 @@ impl DevRunner {
             None => Self::detect_or_select_platform(config)?,
         };
 
-        ui::print_step(&format!(
-            "Iniciando fluxo de desenvolvimento para {}",
-            platform.to_uppercase().cyan().bold()
+        ui::print_step(&t!(
+            "dev.starting_flow",
+            platform = platform.to_uppercase().cyan().bold()
         ));
 
         match platform.as_str() {
             "android" => Self::run_android_dev(root_dir, config, watch)?,
             "ios" => Self::run_ios_dev(root_dir, config, watch)?,
             "desktop" => Self::run_desktop_dev(root_dir, config, watch)?,
-            other => anyhow::bail!(
-                "Plataforma '{}' não reconhecida. Use 'android', 'ios' ou 'desktop'.",
-                other
-            ),
+            other => anyhow::bail!("{}", t!("dev.unknown_platform", platform = other)),
         }
 
         Ok(())
@@ -45,7 +43,7 @@ impl DevRunner {
 
     fn detect_or_select_platform(config: &JirauConfig) -> Result<String> {
         // Test adb connected devices
-        let has_adb_device = Command::new("adb")
+        let has_adb_device = Command::new(crate::android_pipeline::adb())
             .arg("devices")
             .output()
             .map(|out| {
@@ -59,7 +57,7 @@ impl DevRunner {
         let is_macos = cfg!(target_os = "macos");
 
         if has_adb_device && !is_macos {
-            ui::print_info("Dispositivo Android ativo detectado via adb.");
+            ui::print_info(&t!("dev.adb_device_detected"));
             return Ok("android".to_string());
         }
 
@@ -73,197 +71,37 @@ impl DevRunner {
             return Ok(options[0].clone());
         }
 
-        let ans = inquire::Select::new("Selecione a plataforma para desenvolvimento:", options)
-            .with_help_message("Use as setas para escolher e Enter para confirmar")
+        let ans = inquire::Select::new(&t!("dev.select_platform"), options)
+            .with_help_message(&t!("dev.select_help"))
             .prompt();
 
         match ans {
             Ok(choice) => Ok(choice),
-            Err(_) => anyhow::bail!("Operação cancelada pelo usuário."),
+            Err(_) => anyhow::bail!("{}", t!("dev.cancelled")),
         }
     }
 
     fn run_android_dev(root_dir: &Path, config: &JirauConfig, watch: bool) -> Result<()> {
-        let abi = Self::detect_android_abi(&config.dev.default_android_abi);
-        ui::print_substep(&format!("Target ABI Android ativo: {}", abi.cyan().bold()));
-
-        // Initial compile
-        Self::compile_android_abi(root_dir, config, &abi)?;
-
-        if !watch {
-            ui::print_success("Compilação concluída com sucesso.");
-            return Ok(());
+        let dev = crate::run::RunEngine::select_or_detect_android_device(None)?;
+        crate::android_pipeline::deploy_to_device(root_dir, config, &dev)?;
+        if watch {
+            crate::android_pipeline::watch_and_redeploy(root_dir, config, &dev)?;
         }
-
-        ui::print_info("Observando alterações em 'crates/'... Pressione Ctrl+C para encerrar.\n");
-
-        let (tx, rx) = channel();
-        let mut watcher = RecommendedWatcher::new(tx, Config::default())?;
-        let crates_dir = root_dir.join("crates");
-
-        watcher.watch(&crates_dir, RecursiveMode::Recursive)?;
-
-        let mut last_build = Instant::now();
-
-        loop {
-            match rx.recv() {
-                Ok(Ok(Event {
-                    kind: EventKind::Modify(_),
-                    paths,
-                    ..
-                })) => {
-                    // Debounce rapid events (1.5 seconds)
-                    if last_build.elapsed() < Duration::from_millis(1500) {
-                        continue;
-                    }
-
-                    let changed_rs = paths
-                        .iter()
-                        .any(|p| p.extension().is_some_and(|ext| ext == "rs"));
-                    if !changed_rs {
-                        continue;
-                    }
-
-                    let relative_paths: Vec<String> = paths
-                        .iter()
-                        .filter_map(|p| {
-                            p.strip_prefix(root_dir)
-                                .ok()
-                                .map(|d| d.display().to_string())
-                        })
-                        .collect();
-
-                    println!(
-                        "{} Alteração detectada em: {}",
-                        "➜".cyan().bold(),
-                        relative_paths.join(", ").yellow()
-                    );
-
-                    let start = Instant::now();
-                    let spinner = ui::create_spinner("Recompilando núcleo Rust...");
-
-                    match Self::compile_android_abi(root_dir, config, &abi) {
-                        Ok(_) => {
-                            let duration = start.elapsed();
-                            ui::finish_spinner_success(
-                                &spinner,
-                                &format!(
-                                    "Recompilado com sucesso em {:.2}s!",
-                                    duration.as_secs_f32()
-                                ),
-                            );
-                            println!();
-                        }
-                        Err(e) => {
-                            ui::finish_spinner_error(
-                                &spinner,
-                                &format!("Erro na compilação: {}", e),
-                            );
-                            println!();
-                        }
-                    }
-
-                    last_build = Instant::now();
-                }
-                Ok(Err(e)) => {
-                    ui::print_warning(&format!("Erro no monitor de arquivos: {:?}", e));
-                }
-                _ => {}
-            }
-        }
-    }
-
-    fn detect_android_abi(fallback: &str) -> String {
-        let out = Command::new("adb")
-            .args(["shell", "getprop", "ro.product.cpu.abi"])
-            .output();
-
-        if let Ok(output) = out {
-            let s = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if !s.is_empty() {
-                return s;
-            }
-        }
-
-        fallback.to_string()
-    }
-
-    fn compile_android_abi(root_dir: &Path, config: &JirauConfig, abi: &str) -> Result<()> {
-        let ffi_pkg = format!(
-            "{}-ffi",
-            config.app.name.to_lowercase().replace(['_', ' '], "-")
-        );
-        let jni_out = root_dir.join("android/app/src/main/jniLibs");
-
-        let status = Command::new("cargo")
-            .current_dir(root_dir)
-            .args([
-                "ndk",
-                "-t",
-                abi,
-                "-o",
-                jni_out.to_str().unwrap_or("android/app/src/main/jniLibs"),
-                "build",
-                "--package",
-                &ffi_pkg,
-            ])
-            .status()
-            .with_context(|| {
-                "Falha ao executar 'cargo ndk'. Verifique se 'cargo-ndk' está instalado."
-            })?;
-
-        if !status.success() {
-            anyhow::bail!("A compilação do Rust via cargo-ndk falhou.");
-        }
-
         Ok(())
     }
 
     fn run_ios_dev(root_dir: &Path, config: &JirauConfig, watch: bool) -> Result<()> {
-        if !cfg!(target_os = "macos") {
-            ui::print_warning("O build do app iOS completo requer macOS e Xcode.");
-            ui::print_info("Gerando projeto via XcodeGen se 'xcodegen' estiver disponível...");
-        }
-
-        let ios_dir = root_dir.join("ios");
-        if which::which("xcodegen").is_ok() && ios_dir.join("project.yml").exists() {
-            let _ = Command::new("xcodegen")
-                .arg("generate")
-                .current_dir(&ios_dir)
-                .status();
-            ui::print_success("Projeto Xcode atualizado via XcodeGen.");
-        }
-
-        // Target iOS sim
-        let target = "aarch64-apple-ios-sim";
-        ui::print_substep(&format!(
-            "Compilando core para simulador iOS ({})",
-            target.cyan()
+        let sim = crate::run::RunEngine::select_or_detect_ios_simulator(None)?;
+        ui::print_substep(&t!(
+            "dev.target_simulator",
+            name = sim.name.cyan().bold(),
+            udid = sim.udid.yellow()
         ));
 
-        let ffi_pkg = format!(
-            "{}-ffi",
-            config.app.name.to_lowercase().replace(['_', ' '], "-")
-        );
-        let status = Command::new("cargo")
-            .current_dir(root_dir)
-            .args(["build", "--target", target, "--package", &ffi_pkg])
-            .status();
-
-        match status {
-            Ok(s) if s.success() => {
-                ui::print_success("Compilação para simulador iOS concluída com sucesso.");
-            }
-            _ => {
-                ui::print_warning(
-                    "A compilação para o target iOS não pôde ser completada (verifique o doctor).",
-                );
-            }
-        }
+        crate::ios_pipeline::deploy_to_simulator(root_dir, config, &sim)?;
 
         if watch {
-            ui::print_info("Observando alterações em 'crates/' para iOS...");
-            // Loop similarly for iOS if needed
+            crate::ios_pipeline::watch_and_redeploy(root_dir, config, &sim)?;
         }
 
         Ok(())
@@ -273,9 +111,9 @@ impl DevRunner {
         let slug = config.app.name.to_lowercase().replace(['_', ' '], "-");
         let pkg_name = format!("{}-desktop", slug);
 
-        ui::print_info(&format!(
-            "Iniciando app desktop nativo ({}) com Rune UI...",
-            pkg_name.cyan().bold()
+        ui::print_info(&t!(
+            "dev.desktop_starting",
+            package = pkg_name.cyan().bold()
         ));
 
         if !watch {
@@ -283,21 +121,21 @@ impl DevRunner {
                 .current_dir(root_dir)
                 .args(["run", "--package", &pkg_name])
                 .status()
-                .with_context(|| format!("Falha ao executar {}", pkg_name))?;
+                .with_context(|| t!("dev.exec_failed", package = pkg_name).into_owned())?;
 
             if !status.success() {
-                anyhow::bail!("Execução do app desktop falhou.");
+                anyhow::bail!("{}", t!("dev.desktop_failed"));
             }
             return Ok(());
         }
 
-        ui::print_info("Observando alterações em 'crates/'... Pressione Ctrl+C para encerrar.\n");
+        ui::print_info(&t!("dev.watching_crates"));
 
         let mut child = Command::new("cargo")
             .current_dir(root_dir)
             .args(["run", "--package", &pkg_name])
             .spawn()
-            .with_context(|| format!("Falha ao iniciar {}", pkg_name))?;
+            .with_context(|| t!("dev.start_failed", package = pkg_name).into_owned())?;
 
         let (tx, rx) = channel();
         let mut watcher = RecommendedWatcher::new(tx, Config::default())?;
@@ -309,7 +147,7 @@ impl DevRunner {
         loop {
             // Verifica se a janela foi fechada pelo usuário
             if let Ok(Some(_)) = child.try_wait() {
-                ui::print_info("App desktop encerrado pelo usuário.");
+                ui::print_info(&t!("dev.desktop_closed"));
                 break;
             }
 
@@ -340,15 +178,18 @@ impl DevRunner {
                     .collect();
 
                 println!(
-                    "{} Alteração detectada em: {}",
+                    "{} {}",
                     "➜".cyan().bold(),
-                    relative_paths.join(", ").yellow()
+                    t!(
+                        "dev.change_detected",
+                        paths = relative_paths.join(", ").yellow()
+                    )
                 );
 
                 let _ = child.kill();
                 let _ = child.wait();
 
-                let spinner = ui::create_spinner("Recompilando e reiniciando Desktop...");
+                let spinner = ui::create_spinner(&t!("dev.restarting"));
                 let start = Instant::now();
 
                 match Command::new("cargo")
@@ -360,12 +201,15 @@ impl DevRunner {
                         child = new_child;
                         ui::finish_spinner_success(
                             &spinner,
-                            &format!("Reiniciado em {:.2}s!", start.elapsed().as_secs_f32()),
+                            &t!(
+                                "dev.restarted",
+                                secs = format!("{:.2}", start.elapsed().as_secs_f32())
+                            ),
                         );
                         println!();
                     }
                     Err(e) => {
-                        ui::finish_spinner_error(&spinner, &format!("Falha ao reiniciar: {}", e));
+                        ui::finish_spinner_error(&spinner, &t!("dev.restart_failed", error = e));
                         println!();
                     }
                 }

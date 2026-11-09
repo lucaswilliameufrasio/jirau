@@ -1,0 +1,29 @@
+# Mensagens de `jirau build` (build.rs).
+_version: 2
+build.starting:
+  en: "Starting build [%{mode}]"
+  pt-BR: "Iniciando build [%{mode}]"
+build.apk_ready:
+  en: "APK generated at %{path}"
+  pt-BR: "APK gerado em %{path}"
+build.ios_xcframework:
+  en: "Generating the Rust core XCFramework for iOS..."
+  pt-BR: "Gerando XCFramework do núcleo Rust para iOS..."
+build.ios_ready:
+  en: "XCFramework at ios/Frameworks/%{lib}_ffi.xcframework. Open ios/%{project}.xcodeproj to archive/sign."
+  pt-BR: "XCFramework em ios/Frameworks/%{lib}_ffi.xcframework. Abra ios/%{project}.xcodeproj para arquivar/assinar."
+build.desktop_compiling:
+  en: "Compiling the Desktop app binary (Rune UI)..."
+  pt-BR: "Compilando binário do aplicativo Desktop (Rune UI)..."
+build.compile_failed:
+  en: "Failed to compile %{pkg}"
+  pt-BR: "Falha ao compilar %{pkg}"
+build.desktop_ready:
+  en: "Desktop binary built successfully at: %{path}"
+  pt-BR: "Binário Desktop gerado com sucesso em: %{path}"
+build.desktop_failed:
+  en: "Desktop binary compilation failed."
+  pt-BR: "Falha na compilação do binário Desktop."
+build.done:
+  en: "Build process finished."
+  pt-BR: "Processo de build finalizado."

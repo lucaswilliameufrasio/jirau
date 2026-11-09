@@ -1,35 +1,36 @@
-# 🤖 Guia de Configuração do Ambiente Android (Debian / Linux)
+# 🤖 Android Environment Setup Guide (Debian / Linux) — all-platforms-showcase
 
-Este guia descreve os passos necessários para configurar o ambiente de desenvolvimento Android completo para projetos scaffoldados com o **jirau**, incluindo a compilação do núcleo nativo em **Rust** via `cargo-ndk`.
+This guide describes the steps required to set up a complete Android development environment for **all-platforms-showcase**, including building the native **Rust** core via `cargo-ndk`.
 
 ---
 
-## 1. Instalação do JDK e Dependências do Sistema
+## 1. Installing the JDK and System Dependencies
 
-No Debian GNU/Linux (ou derivados como Ubuntu/Mint), instale o OpenJDK 17 ou 21 e as bibliotecas essenciais:
+On Debian GNU/Linux (or derivatives such as Ubuntu/Mint), install JDK 25 (the current LTS; the project's `.mise.toml` already pins it) and the essential libraries:
 
 ```bash
 sudo apt update
-sudo apt install -y openjdk-21-jdk curl git unzip libglu1-mesa
+sudo apt install -y curl git unzip libglu1-mesa
+mise install   # JDK 25 and Rust 1.99.1, as defined in .mise.toml
 ```
 
-### Aceleração de Hardware para o Emulador (KVM)
+### Hardware Acceleration for the Emulator (KVM)
 
-Para rodar emuladores Android com aceleração de hardware:
+To run Android emulators with hardware acceleration:
 
 ```bash
 sudo apt install -y qemu-kvm
 sudo usermod -aG kvm $USER
 ```
-*(Reinicie a sessão ou dê logout/login para aplicar o novo grupo).*
+*(Restart your session or log out/in to apply the new group.)*
 
 ---
 
-## 2. Servidores Headless (Debian 13 CLI / Sem Interface Gráfica)
+## 2. Headless Servers (Debian 13 CLI / No Graphical Interface)
 
-Em servidores ou ambientes headless (sem ambiente gráfico de desktop), **não é necessário instalar o Android Studio**. O ambiente é 100% gerenciado via linha de comando com `mise`, `sdkmanager` e `cargo-ndk`:
+On servers or headless environments (no desktop environment), **you do not need to install Android Studio**. The environment is managed 100% from the command line with `mise`, `sdkmanager` and `cargo-ndk`:
 
-### 2.1. Instalar o Android SDK Command-line Tools
+### 2.1. Install the Android SDK Command-line Tools
 
 ```bash
 mkdir -p ~/Android/Sdk/cmdline-tools
@@ -40,71 +41,69 @@ chmod +x ~/Android/Sdk/cmdline-tools/latest/bin/*
 rm -rf /tmp/cmdline-tools.zip /tmp/cmdline-extracted
 ```
 
-### 2.2. Aceitar Licenças e Instalar Componentes (SDK, NDK, Platform-tools)
+### 2.2. Accept Licenses and Install Components (SDK, NDK, Platform-tools)
 
 ```bash
-# Aceita todas as licenças do SDK
+# Accept all SDK licenses
 yes | ~/Android/Sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/Android/Sdk --licenses
 
-# Instala os pacotes necessários
+# Install the required packages
 ~/Android/Sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/Android/Sdk \
   "platform-tools" \
-  "platforms;android-35" \
-  "build-tools;35.0.0" \
-  "ndk;27.2.12479018" \
-  "cmake;3.22.1"
+  "platforms;android-37" \
+  "build-tools;37.0.0" \
+  "ndk;30.0.16248370"
 ```
 
 ---
 
-## 3. Workstations com Interface Gráfica (Android Studio)
+## 3. Workstations with a Graphical Interface (Android Studio)
 
-Se você estiver em uma máquina local com desktop (GNOME, KDE, etc.) e quiser utilizar o IDE:
+If you are on a local machine with a desktop (GNOME, KDE, etc.) and want to use the IDE:
 
-### Opção A: Flatpak (Recomendado para isolamento)
+### Option A: Flatpak (Recommended for isolation)
 
 ```bash
 flatpak install flathub com.google.AndroidStudio
 flatpak run com.google.AndroidStudio
 ```
 
-### Opção B: Tarball Oficial
+### Option B: Official Tarball
 
-1. Baixe o `.tar.gz` estável em [developer.android.com/studio](https://developer.android.com/studio).
-2. Extraia para `/opt`:
+1. Download the stable `.tar.gz` from [developer.android.com/studio](https://developer.android.com/studio).
+2. Extract it to `/opt`:
    ```bash
    sudo tar -xvzf android-studio-*.tar.gz -C /opt/
    ```
-3. Inicie o instalador:
+3. Start the installer:
    ```bash
    /opt/android-studio/bin/studio.sh
    ```
 
 ---
 
-## 4. Componentes Obrigatórios do SDK & NDK
+## 4. Required SDK & NDK Components
 
-Se configurou via interface do Android Studio:
-**Settings** $\rightarrow$ **Languages & Frameworks** $\rightarrow$ **Android SDK** $\rightarrow$ aba **SDK Tools**:
+If you set things up through the Android Studio interface:
+**Settings** $\rightarrow$ **Languages & Frameworks** $\rightarrow$ **Android SDK** $\rightarrow$ **SDK Tools** tab:
 - [x] **Android SDK Command-line Tools (latest)**
 - [x] **Android SDK Platform-Tools** (`adb`)
-- [x] **NDK (Side by side)** (`27.2.12479018` ou `26.3`)
-- [x] **CMake (3.22+)**
+- [x] **NDK (Side by side)** (`30.0.16248370`)
 
-Por padrão no Linux, o SDK será instalado em `~/Android/Sdk`.
+By default on Linux, the SDK is installed in `~/Android/Sdk`.
 
 ---
 
-## 5. Variáveis de Ambiente
+## 5. Environment Variables
 
-Configure as variáveis para que ferramentas de linha de comando (`adb`, `cargo-ndk`, `gradlew`) encontrem o SDK.
+Set these variables so that command-line tools (`adb`, `cargo-ndk`, `gradlew`) can find the SDK.
 
-### Bash (`~/.bashrc`) ou Zsh (`~/.zshrc`)
+### Bash (`~/.bashrc`) or Zsh (`~/.zshrc`)
 
 ```bash
 export ANDROID_HOME="$HOME/Android/Sdk"
 export ANDROID_SDK_ROOT="$ANDROID_HOME"
-export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018"
+export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/30.0.16248370"
 export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$HOME/.cargo/bin:$PATH"
 ```
 
@@ -113,36 +112,36 @@ export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
 ```fish
 set -gx ANDROID_HOME "$HOME/Android/Sdk"
 set -gx ANDROID_SDK_ROOT "$ANDROID_HOME"
-set -gx ANDROID_NDK_HOME "$ANDROID_HOME/ndk/27.2.12479018"
+set -gx ANDROID_NDK_HOME "$ANDROID_HOME/ndk/30.0.16248370"
 fish_add_path "$ANDROID_HOME/cmdline-tools/latest/bin" "$ANDROID_HOME/platform-tools" "$HOME/.cargo/bin"
 ```
 
-Após editar, recarregue seu shell:
+After editing, reload your shell:
 ```bash
-source ~/.bashrc # ou source ~/.zshrc
+source ~/.bashrc # or source ~/.zshrc
 ```
 
 ---
 
-## 6. Toolchain Rust para Android (`cargo-ndk` e Targets)
+## 6. Rust Toolchain for Android (`cargo-ndk` and Targets)
 
-O compilador Rust precisa dos alvos Android instalados:
+Since all-platforms-showcase has a shared Rust core, the compiler needs the Android targets installed:
 
 ```bash
-# Adicionar os alvos de compilação cruzada do Rust
+# Add the Rust cross-compilation targets
 rustup target add \
   aarch64-linux-android \
   armv7-linux-androideabi \
   x86_64-linux-android \
   i686-linux-android
 
-# Instalar o utilitário cargo-ndk
+# Install the cargo-ndk utility
 cargo install cargo-ndk
 ```
 
-### Script Automatizado
+### Automated Script
 
-O jirau disponibiliza um script que verifica e configura essas dependências automaticamente:
+The repository ships a script that checks and configures these dependencies automatically:
 
 ```bash
 ./scripts/setup-android-env.sh
@@ -150,14 +149,27 @@ O jirau disponibiliza um script que verifica e configura essas dependências aut
 
 ---
 
-## 7. Verificação do Ambiente com jirau doctor
+## 7. Verifying the Environment
 
-Para validar se tudo está configurado corretamente:
+To check that everything is configured correctly:
 
-```bash
-jirau doctor
-```
-Ou no root do repositório:
-```bash
-make doctor
-```
+1. Run the jirau diagnostics:
+   ```bash
+   jirau doctor
+   ```
+2. Test `adb`:
+   ```bash
+   adb devices
+   ```
+3. Test `cargo-ndk`:
+   ```bash
+   cargo ndk --version
+   ```
+4. Test the Rust compiler targets:
+   ```bash
+   rustup target list --installed
+   ```
+5. Run the first Gradle build:
+   ```bash
+   cd android && ./gradlew assembleDebug
+   ```

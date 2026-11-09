@@ -4,7 +4,6 @@
 # ==============================================================================
 
 export ANDROID_HOME ?= $(HOME)/Android/Sdk
-export ANDROID_NDK_HOME ?= $(ANDROID_HOME)/ndk/27.2.12479018
 export PATH := $(HOME)/.local/bin:$(ANDROID_HOME)/platform-tools:$(ANDROID_HOME)/cmdline-tools/latest/bin:$(PATH)
 IOS_DEVICE     ?= $(shell xcrun simctl list devices 2>/dev/null | grep -i booted | grep -oE '[0-9A-F-]{36}' | head -1)
 MISE           := $(shell if [ -f "$$HOME/.local/bin/mise" ]; then echo "$$HOME/.local/bin/mise"; elif command -v mise >/dev/null 2>&1; then echo "mise"; else echo ""; fi)
@@ -12,7 +11,6 @@ RUN            := $(if $(MISE),$(MISE) exec --,)
 CARGO          ?= $(shell command -v cargo 2>/dev/null || echo "$$HOME/.cargo/bin/cargo")
 RUSTUP         ?= $(shell command -v rustup 2>/dev/null || echo "$$HOME/.cargo/bin/rustup")
 ADB            ?= $(shell command -v adb 2>/dev/null || echo "$$HOME/Android/Sdk/platform-tools/adb")
-GRADLE_CMD     := $(shell if [ -f android/gradlew ]; then echo "./gradlew"; elif command -v gradle >/dev/null 2>&1; then echo "gradle"; else echo "./gradlew"; fi)
 
 .PHONY: all help setup doctor devices test test-core check format clean
 
@@ -26,14 +24,17 @@ help:
 	@echo "  make devices                - Lista emuladores e dispositivos móveis conectados"
 	@echo "  make test                   - Executa todos os testes da workspace (Rust Core + integrações)"
 	@echo "  make test-core              - Executa testes unitários do núcleo Rust puro no host"
-	@echo "  make test-android           - Executa testes unitários do app Android"
+	@echo "  make test-android           - Executa testes JVM do app Android (sem dispositivo)"
+	@echo "  make test-android-device    - Testes instrumentados (Rust real) no dispositivo conectado"
 	@echo "  make test-ios               - Executa testes do target iOS via xcodebuild (macOS)"
 	@echo "  make check                  - Executa cargo check e cargo clippy"
 	@echo "  make format                 - Formata o código Rust (cargo fmt)"
 	@echo "  make build-core             - Compila as crates Rust da workspace"
+	@echo "  make android-ffi            - Compila o núcleo Rust para Android (.so + bindings Kotlin)"
 	@echo "  make apk-debug              - Gera APK Android de Debug"
 	@echo "  make apk-release            - Gera APK Android de Release"
 	@echo "  make build-android          - Alias para apk-debug"
+	@echo "  make ios-ffi                - Compila o núcleo Rust para iOS (XCFramework + bindings Swift)"
 	@echo "  make ios-project            - Gera projeto Xcode via XcodeGen (ios/project.yml)"
 	@echo "  make build-ios              - Compila o app iOS via xcodebuild (macOS)"
 	@echo "  make clean                  - Limpa artefatos de compilação"
@@ -80,36 +81,42 @@ clean:
 	@$(CARGO) clean
 	@if [ -d android ]; then cd android && rm -rf .gradle build app/build; fi
 
+android-ffi:
+	@$(RUN) ./scripts/build-android-ffi.sh debug
+
 test-android:
-	@if [ -f android/gradlew ]; then \
-		cd android && $(RUN) ./gradlew :app:testDebugUnitTest; \
-	elif command -v gradle >/dev/null 2>&1; then \
-		cd android && $(RUN) gradle :app:testDebugUnitTest; \
-	else \
-		echo "Abra a pasta android/ no Android Studio para gerar o Gradle Wrapper."; \
-	fi
+	@cd android && $(RUN) ./gradlew :app:testDebugUnitTest
+
+test-android-device:
+	@cd android && $(RUN) ./gradlew :app:connectedDebugAndroidTest
 
 apk-debug:
-	@cd android && $(RUN) $(GRADLE_CMD) assembleDebug
+	@cd android && $(RUN) ./gradlew assembleDebug
 
 apk-release:
-	@cd android && $(RUN) $(GRADLE_CMD) assembleRelease
+	@cd android && $(RUN) ./gradlew assembleRelease
 
 build-android: apk-debug
 
-ios-project:
+ios-ffi:
+	@$(RUN) ./scripts/build-ios-ffi.sh debug
+
+ios-project: ios-ffi
 	@cd ios && xcodegen generate
 
 build-ios: ios-project
 	@if [ "$$(uname -s)" = "Darwin" ]; then \
-		cd ios && xcodebuild -project MobileGradleStarter.xcodeproj -scheme MobileGradleStarter -configuration Debug -destination 'generic/platform=iOS Simulator' build; \
+		cd ios && xcodebuild -project MobileGradleStarter.xcodeproj -scheme MobileGradleStarter -configuration Debug -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO; \
 	else \
 		echo "ℹ️  Build iOS requer macOS com Xcode."; \
 	fi
 
 test-ios: ios-project
-	@if [ "$$(uname -s)" = "Darwin" ]; then \
-		cd ios && xcodebuild test -project MobileGradleStarter.xcodeproj -scheme MobileGradleStarter -destination 'platform=iOS Simulator,id=$(IOS_DEVICE)'; \
-	else \
+	@if [ "$$(uname -s)" != "Darwin" ]; then \
 		echo "ℹ️  Testes iOS requerem macOS com Xcode."; \
+	elif [ -z "$(IOS_DEVICE)" ]; then \
+		echo "❌ Nenhum simulador iOS ligado. Inicie um com: xcrun simctl boot <UDID>"; exit 1; \
+	else \
+		cd ios && xcodebuild test -project MobileGradleStarter.xcodeproj -scheme MobileGradleStarter -destination 'platform=iOS Simulator,id=$(IOS_DEVICE)'; \
 	fi
+

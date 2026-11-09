@@ -1,26 +1,29 @@
-use super::TemplateContext;
+use super::{TemplateContext, versions};
 
 pub fn core_cargo_toml(ctx: &TemplateContext) -> String {
-    let mut deps = r#"serde = { version = "1.0", features = ["derive"] }
-thiserror = "1.0""#
-        .to_string();
-
+    let mut deps = format!(
+        "serde = {{ version = \"{serde}\", features = [\"derive\"] }}\nthiserror = \"{thiserror}\"",
+        serde = versions::SERDE,
+        thiserror = versions::THISERROR
+    );
     if ctx.storage == "sqlite" {
-        deps.push_str("\nrusqlite = { version = \"0.41\", features = [\"bundled\"] }");
+        deps.push_str(&format!(
+            "\nrusqlite = {{ version = \"{}\", features = [\"bundled\"] }}",
+            versions::RUSQLITE
+        ));
     }
 
     format!(
         r#"[package]
 name = "{slug}-core"
 version = "0.1.0"
-edition = "2021"
+edition = "{edition}"
 
 [dependencies]
 {deps}
-
-[dev-dependencies]
 "#,
         slug = ctx.slug,
+        edition = versions::RUST_EDITION,
         deps = deps
     )
 }

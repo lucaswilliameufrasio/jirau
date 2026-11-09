@@ -3,51 +3,72 @@ package com.example.mobile
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.mobile.ui.theme.JirauTheme
+import com.example.mobile.uniffi.AppEngine
+import com.example.mobile.uniffi.NativeException
+import com.example.mobile.uniffi.nativeGreet
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-// Model de visualização consumindo diretamente o UniFFI
-class MainViewModel : ViewModel() {
-    // No ambiente integrado, o binding gerado instancia o AppEngine via UniFFI
-    private val _counter = MutableStateFlow(0)
+/** Estado e regras vivem no núcleo Rust; a ViewModel só repassa as chamadas (UniFFI). */
+class MainViewModel(private val engine: AppEngine = AppEngine()) : ViewModel() {
+    private val _counter = MutableStateFlow(engine.getState().counter)
     val counter: StateFlow<Int> = _counter.asStateFlow()
 
-    private val _status = MutableStateFlow("Núcleo Rust conectado")
+    private val _status = MutableStateFlow(nativeGreet("Android"))
     val status: StateFlow<String> = _status.asStateFlow()
 
     fun increment() {
-        _counter.value += 1
-        _status.value = "Incrementado via Rust StateEngine"
+        _counter.value = engine.increment().counter
+        _status.value = "Incrementado pelo núcleo Rust"
     }
 
     fun decrement() {
-        if (_counter.value > 0) {
-            _counter.value -= 1
-            _status.value = "Decrementado via Rust StateEngine"
-        } else {
-            _status.value = "Erro validado no Rust: valor não pode ser negativo"
+        try {
+            _counter.value = engine.decrement().counter
+            _status.value = "Decrementado pelo núcleo Rust"
+        } catch (e: NativeException.NegativeValue) {
+            _status.value = "Rust recusou: o contador não pode ficar negativo"
         }
+    }
+
+    override fun onCleared() {
+        engine.close()
     }
 }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContent {
-            MaterialTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
+            JirauTheme {
+                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     AppScreen()
                 }
             }
@@ -61,67 +82,45 @@ fun AppScreen(vm: MainViewModel = viewModel()) {
     val status by vm.status.collectAsState()
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
+        modifier = Modifier.fillMaxSize().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(
-            text = "🪵 mobile-gradle-starter",
-            style = MaterialTheme.typography.headlineMedium
-        )
+        Text("🪵 mobile-gradle-starter", style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "UI Nativa Android em Jetpack Compose",
+            "UI nativa em Jetpack Compose + núcleo em Rust",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.secondary
         )
         Spacer(modifier = Modifier.height(32.dp))
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
+        Card(modifier = Modifier.fillMaxWidth()) {
             Column(
-                modifier = Modifier.padding(20.dp),
+                modifier = Modifier.fillMaxWidth().padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                Text("Contador (Rust Core)", style = MaterialTheme.typography.labelLarge)
                 Text(
-                    text = "Contador (Rust Core):",
-                    style = MaterialTheme.typography.labelLarge
-                )
-                Text(
-                    text = "$counter",
+                    "$counter",
                     style = MaterialTheme.typography.displayLarge,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.testTag("counter")
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = status,
-                    style = MaterialTheme.typography.bodySmall
-                )
+                Text(status, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("status"))
             }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             Button(
-                onClick = { vm.decrement() },
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-            ) {
-                Text("- Decrementar")
-            }
-
-            Button(
-                onClick = { vm.increment() }
-            ) {
-                Text("+ Incrementar")
-            }
+                onClick = vm::decrement,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                modifier = Modifier.testTag("decrement")
+            ) { Text("− Menos") }
+            Button(onClick = vm::increment, modifier = Modifier.testTag("increment")) { Text("+ Mais") }
         }
     }
 }

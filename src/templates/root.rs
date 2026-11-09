@@ -1,4 +1,4 @@
-use super::TemplateContext;
+use super::{TemplateContext, versions};
 
 pub fn root_cargo_toml(ctx: &TemplateContext) -> String {
     let mut members = vec![format!("\"crates/{}-core\"", ctx.slug)];
@@ -20,7 +20,7 @@ pub fn root_cargo_toml(ctx: &TemplateContext) -> String {
 members = [
 {members}
 ]
-resolver = "2"
+resolver = "3"
 
 [profile.dev.package."*"]
 opt-level = 2
@@ -49,6 +49,7 @@ android/.idea/
 android/*.iml
 android/*/*.iml
 android/.cxx/
+android/.kotlin/
 android/app/build/generated/uniffi/
 android/app/src/main/jniLibs/
 
@@ -67,14 +68,14 @@ Thumbs.db
 }
 
 pub fn root_mise_toml() -> String {
-    r#"[tools]
-java = "21"
-rust = "1.99.1"
-"#
-    .to_string()
+    format!(
+        "[tools]\njava = \"{java}\"\nrust = \"{rust}\"\n",
+        java = versions::JAVA_LTS,
+        rust = versions::RUST
+    )
 }
 
-pub fn testing_standard_md(ctx: &TemplateContext) -> String {
+pub fn testing_standard_md_pt_br(ctx: &TemplateContext) -> String {
     format!(
         r#"# Diretrizes de Testes — {name}
 
@@ -102,6 +103,43 @@ Este repositório adota a metodologia de testes rápidos em camada:
    - Execução local: `cargo run --package {slug}-desktop`.
 
 Execute no host:
+```bash
+cargo test --workspace
+```
+"#,
+        name = ctx.name,
+        slug = ctx.slug
+    )
+}
+
+pub fn testing_standard_md_en(ctx: &TemplateContext) -> String {
+    format!(
+        r#"# Testing Guidelines — {name}
+
+This repository follows a fast, layered testing methodology:
+
+1. **Rust core (`crates/{slug}-core`)**:
+   - Pure unit tests run directly on the host via `cargo test`.
+   - They do not depend on an emulator, simulator, Android NDK or UniFFI.
+   - Execution target: < 500 ms.
+
+2. **FFI layer (`crates/{slug}-ffi`)**:
+   - Validates the integrity of the generated bindings and the serialization of primitive/complex types.
+
+3. **Android (`android/app`)**:
+   - Unit tests with JUnit 5 + Mockito for ViewModels.
+   - Jetpack Compose previews for static visual validation.
+
+4. **iOS (`ios/App`)**:
+   - XCTest unit tests for `@Observable` models.
+   - SwiftUI Canvas previews.
+
+5. **Desktop (`crates/{slug}-desktop`)**:
+   - Native GPU-rendered UI with Rune (anomalyco/rune).
+   - Reuses the `{slug}-core` crate directly in Rust, with no FFI overhead.
+   - Run locally: `cargo run --package {slug}-desktop`.
+
+Run on the host:
 ```bash
 cargo test --workspace
 ```
@@ -171,8 +209,12 @@ pub fn root_makefile(ctx: &TemplateContext) -> String {
         "  make test-core              - Executa testes unitários do núcleo Rust puro no host",
     ];
     if has_android {
-        help_entries
-            .push("  make test-android           - Executa testes unitários do app Android");
+        help_entries.push(
+            "  make test-android           - Executa testes JVM do app Android (sem dispositivo)",
+        );
+        help_entries.push(
+            "  make test-android-device    - Testes instrumentados (Rust real) no dispositivo conectado",
+        );
     }
     if has_ios {
         help_entries.push(
@@ -183,11 +225,17 @@ pub fn root_makefile(ctx: &TemplateContext) -> String {
     help_entries.push("  make format                 - Formata o código Rust (cargo fmt)");
     help_entries.push("  make build-core             - Compila as crates Rust da workspace");
     if has_android {
+        help_entries.push(
+            "  make android-ffi            - Compila o núcleo Rust para Android (.so + bindings Kotlin)",
+        );
         help_entries.push("  make apk-debug              - Gera APK Android de Debug");
         help_entries.push("  make apk-release            - Gera APK Android de Release");
         help_entries.push("  make build-android          - Alias para apk-debug");
     }
     if has_ios {
+        help_entries.push(
+            "  make ios-ffi                - Compila o núcleo Rust para iOS (XCFramework + bindings Swift)",
+        );
         help_entries.push(
             "  make ios-project            - Gera projeto Xcode via XcodeGen (ios/project.yml)",
         );
@@ -203,7 +251,12 @@ pub fn root_makefile(ctx: &TemplateContext) -> String {
     }
     help_entries.push("  make clean                  - Limpa artefatos de compilação");
 
-    let help_text = help_entries.join("\n");
+    // Cada linha de receita do Makefile precisa começar com TAB.
+    let help_text = help_entries
+        .iter()
+        .map(|entry| format!("\t@echo \"{}\"", entry))
+        .collect::<Vec<_>>()
+        .join("\n");
 
     let mut targets = Vec::new();
 
@@ -228,20 +281,20 @@ pub fn root_makefile(ctx: &TemplateContext) -> String {
 
     if has_android {
         targets.push(
-            r#"test-android:
-	@if [ -f android/gradlew ]; then \
-		cd android && $(RUN) ./gradlew :app:testDebugUnitTest; \
-	elif command -v gradle >/dev/null 2>&1; then \
-		cd android && $(RUN) gradle :app:testDebugUnitTest; \
-	else \
-		echo "Abra a pasta android/ no Android Studio para gerar o Gradle Wrapper."; \
-	fi
+            r#"android-ffi:
+	@$(RUN) ./scripts/build-android-ffi.sh debug
+
+test-android:
+	@cd android && $(RUN) ./gradlew :app:testDebugUnitTest
+
+test-android-device:
+	@cd android && $(RUN) ./gradlew :app:connectedDebugAndroidTest
 
 apk-debug:
-	@cd android && $(RUN) $(GRADLE_CMD) assembleDebug
+	@cd android && $(RUN) ./gradlew assembleDebug
 
 apk-release:
-	@cd android && $(RUN) $(GRADLE_CMD) assembleRelease
+	@cd android && $(RUN) ./gradlew assembleRelease
 
 build-android: apk-debug
 "#
@@ -251,21 +304,26 @@ build-android: apk-debug
 
     if has_ios {
         targets.push(format!(
-            r#"ios-project:
+            r#"ios-ffi:
+	@$(RUN) ./scripts/build-ios-ffi.sh debug
+
+ios-project: ios-ffi
 	@cd ios && xcodegen generate
 
 build-ios: ios-project
 	@if [ "$$(uname -s)" = "Darwin" ]; then \
-		cd ios && xcodebuild -project {pascal_name}.xcodeproj -scheme {pascal_name} -configuration Debug -destination 'generic/platform=iOS Simulator' build; \
+		cd ios && xcodebuild -project {pascal_name}.xcodeproj -scheme {pascal_name} -configuration Debug -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO; \
 	else \
 		echo "ℹ️  Build iOS requer macOS com Xcode."; \
 	fi
 
 test-ios: ios-project
-	@if [ "$$(uname -s)" = "Darwin" ]; then \
-		cd ios && xcodebuild test -project {pascal_name}.xcodeproj -scheme {pascal_name} -destination 'platform=iOS Simulator,id=$(IOS_DEVICE)'; \
-	else \
+	@if [ "$$(uname -s)" != "Darwin" ]; then \
 		echo "ℹ️  Testes iOS requerem macOS com Xcode."; \
+	elif [ -z "$(IOS_DEVICE)" ]; then \
+		echo "❌ Nenhum simulador iOS ligado. Inicie um com: xcrun simctl boot <UDID>"; exit 1; \
+	else \
+		cd ios && xcodebuild test -project {pascal_name}.xcodeproj -scheme {pascal_name} -destination 'platform=iOS Simulator,id=$(IOS_DEVICE)'; \
 	fi
 "#,
             pascal_name = ctx.pascal_name
@@ -293,7 +351,6 @@ run-desktop:
 # ==============================================================================
 
 export ANDROID_HOME ?= $(HOME)/Android/Sdk
-export ANDROID_NDK_HOME ?= $(ANDROID_HOME)/ndk/27.2.12479018
 export PATH := $(HOME)/.local/bin:$(ANDROID_HOME)/platform-tools:$(ANDROID_HOME)/cmdline-tools/latest/bin:$(PATH)
 IOS_DEVICE     ?= $(shell xcrun simctl list devices 2>/dev/null | grep -i booted | grep -oE '[0-9A-F-]{{36}}' | head -1)
 MISE           := $(shell if [ -f "$$HOME/.local/bin/mise" ]; then echo "$$HOME/.local/bin/mise"; elif command -v mise >/dev/null 2>&1; then echo "mise"; else echo ""; fi)
@@ -301,7 +358,6 @@ RUN            := $(if $(MISE),$(MISE) exec --,)
 CARGO          ?= $(shell command -v cargo 2>/dev/null || echo "$$HOME/.cargo/bin/cargo")
 RUSTUP         ?= $(shell command -v rustup 2>/dev/null || echo "$$HOME/.cargo/bin/rustup")
 ADB            ?= $(shell command -v adb 2>/dev/null || echo "$$HOME/Android/Sdk/platform-tools/adb")
-GRADLE_CMD     := $(shell if [ -f android/gradlew ]; then echo "./gradlew"; elif command -v gradle >/dev/null 2>&1; then echo "gradle"; else echo "./gradlew"; fi)
 
 .PHONY: all help setup doctor devices test test-core check format clean
 
@@ -361,7 +417,7 @@ clean:
     )
 }
 
-pub fn setup_android_md(ctx: &TemplateContext) -> String {
+pub fn setup_android_md_pt_br(ctx: &TemplateContext) -> String {
     format!(
         r#"# 🤖 Guia de Configuração do Ambiente Android (Debian / Linux) — {name}
 
@@ -371,11 +427,12 @@ Este guia descreve os passos necessários para configurar o ambiente de desenvol
 
 ## 1. Instalação do JDK e Dependências do Sistema
 
-No Debian GNU/Linux (ou derivados como Ubuntu/Mint), instale o OpenJDK 17 ou 21 e as bibliotecas essenciais:
+No Debian GNU/Linux (ou derivados como Ubuntu/Mint), instale o JDK {java} (LTS atual; o `.mise.toml` do projeto já o fixa) e as bibliotecas essenciais:
 
 ```bash
 sudo apt update
-sudo apt install -y openjdk-21-jdk curl git unzip libglu1-mesa
+sudo apt install -y curl git unzip libglu1-mesa
+mise install   # JDK {java} e Rust {rust}, conforme .mise.toml
 ```
 
 ### Aceleração de Hardware para o Emulador (KVM)
@@ -414,10 +471,9 @@ yes | ~/Android/Sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/Android
 # Instala os pacotes necessários
 ~/Android/Sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/Android/Sdk \
   "platform-tools" \
-  "platforms;android-35" \
-  "build-tools;35.0.0" \
-  "ndk;27.2.12479018" \
-  "cmake;3.22.1"
+  "platforms;android-{sdk}" \
+  "build-tools;{build_tools}" \
+  "ndk;{ndk}"
 ```
 
 ---
@@ -453,8 +509,7 @@ Se configurou via interface do Android Studio:
 **Settings** $\rightarrow$ **Languages & Frameworks** $\rightarrow$ **Android SDK** $\rightarrow$ aba **SDK Tools**:
 - [x] **Android SDK Command-line Tools (latest)**
 - [x] **Android SDK Platform-Tools** (`adb`)
-- [x] **NDK (Side by side)** (`27.2.12479018` ou `26.3`)
-- [x] **CMake (3.22+)**
+- [x] **NDK (Side by side)** (`{ndk}`)
 
 Por padrão no Linux, o SDK será instalado em `~/Android/Sdk`.
 
@@ -469,7 +524,7 @@ Configure as variáveis para que ferramentas de linha de comando (`adb`, `cargo-
 ```bash
 export ANDROID_HOME="$HOME/Android/Sdk"
 export ANDROID_SDK_ROOT="$ANDROID_HOME"
-export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018"
+export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/{ndk}"
 export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$HOME/.cargo/bin:$PATH"
 ```
 
@@ -478,7 +533,7 @@ export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
 ```fish
 set -gx ANDROID_HOME "$HOME/Android/Sdk"
 set -gx ANDROID_SDK_ROOT "$ANDROID_HOME"
-set -gx ANDROID_NDK_HOME "$ANDROID_HOME/ndk/27.2.12479018"
+set -gx ANDROID_NDK_HOME "$ANDROID_HOME/ndk/{ndk}"
 fish_add_path "$ANDROID_HOME/cmdline-tools/latest/bin" "$ANDROID_HOME/platform-tools" "$HOME/.cargo/bin"
 ```
 
@@ -540,7 +595,199 @@ Para validar se tudo está configurado corretamente:
    cd android && ./gradlew assembleDebug
    ```
 "#,
-        name = ctx.name
+        name = ctx.name,
+        java = versions::JAVA_LTS,
+        rust = versions::RUST,
+        sdk = versions::ANDROID_COMPILE_SDK,
+        build_tools = versions::ANDROID_BUILD_TOOLS,
+        ndk = versions::ANDROID_NDK,
+    )
+}
+
+pub fn setup_android_md_en(ctx: &TemplateContext) -> String {
+    format!(
+        r#"# 🤖 Android Environment Setup Guide (Debian / Linux) — {name}
+
+This guide describes the steps required to set up a complete Android development environment for **{name}**, including building the native **Rust** core via `cargo-ndk`.
+
+---
+
+## 1. Installing the JDK and System Dependencies
+
+On Debian GNU/Linux (or derivatives such as Ubuntu/Mint), install JDK {java} (the current LTS; the project's `.mise.toml` already pins it) and the essential libraries:
+
+```bash
+sudo apt update
+sudo apt install -y curl git unzip libglu1-mesa
+mise install   # JDK {java} and Rust {rust}, as defined in .mise.toml
+```
+
+### Hardware Acceleration for the Emulator (KVM)
+
+To run Android emulators with hardware acceleration:
+
+```bash
+sudo apt install -y qemu-kvm
+sudo usermod -aG kvm $USER
+```
+*(Restart your session or log out/in to apply the new group.)*
+
+---
+
+## 2. Headless Servers (Debian 13 CLI / No Graphical Interface)
+
+On servers or headless environments (no desktop environment), **you do not need to install Android Studio**. The environment is managed 100% from the command line with `mise`, `sdkmanager` and `cargo-ndk`:
+
+### 2.1. Install the Android SDK Command-line Tools
+
+```bash
+mkdir -p ~/Android/Sdk/cmdline-tools
+curl -L -o /tmp/cmdline-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+python3 -m zipfile -e /tmp/cmdline-tools.zip /tmp/cmdline-extracted
+mv /tmp/cmdline-extracted/cmdline-tools ~/Android/Sdk/cmdline-tools/latest
+chmod +x ~/Android/Sdk/cmdline-tools/latest/bin/*
+rm -rf /tmp/cmdline-tools.zip /tmp/cmdline-extracted
+```
+
+### 2.2. Accept Licenses and Install Components (SDK, NDK, Platform-tools)
+
+```bash
+# Accept all SDK licenses
+yes | ~/Android/Sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/Android/Sdk --licenses
+
+# Install the required packages
+~/Android/Sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/Android/Sdk \
+  "platform-tools" \
+  "platforms;android-{sdk}" \
+  "build-tools;{build_tools}" \
+  "ndk;{ndk}"
+```
+
+---
+
+## 3. Workstations with a Graphical Interface (Android Studio)
+
+If you are on a local machine with a desktop (GNOME, KDE, etc.) and want to use the IDE:
+
+### Option A: Flatpak (Recommended for isolation)
+
+```bash
+flatpak install flathub com.google.AndroidStudio
+flatpak run com.google.AndroidStudio
+```
+
+### Option B: Official Tarball
+
+1. Download the stable `.tar.gz` from [developer.android.com/studio](https://developer.android.com/studio).
+2. Extract it to `/opt`:
+   ```bash
+   sudo tar -xvzf android-studio-*.tar.gz -C /opt/
+   ```
+3. Start the installer:
+   ```bash
+   /opt/android-studio/bin/studio.sh
+   ```
+
+---
+
+## 4. Required SDK & NDK Components
+
+If you set things up through the Android Studio interface:
+**Settings** $\rightarrow$ **Languages & Frameworks** $\rightarrow$ **Android SDK** $\rightarrow$ **SDK Tools** tab:
+- [x] **Android SDK Command-line Tools (latest)**
+- [x] **Android SDK Platform-Tools** (`adb`)
+- [x] **NDK (Side by side)** (`{ndk}`)
+
+By default on Linux, the SDK is installed in `~/Android/Sdk`.
+
+---
+
+## 5. Environment Variables
+
+Set these variables so that command-line tools (`adb`, `cargo-ndk`, `gradlew`) can find the SDK.
+
+### Bash (`~/.bashrc`) or Zsh (`~/.zshrc`)
+
+```bash
+export ANDROID_HOME="$HOME/Android/Sdk"
+export ANDROID_SDK_ROOT="$ANDROID_HOME"
+export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/{ndk}"
+export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$HOME/.cargo/bin:$PATH"
+```
+
+### Fish Shell (`~/.config/fish/config.fish`)
+
+```fish
+set -gx ANDROID_HOME "$HOME/Android/Sdk"
+set -gx ANDROID_SDK_ROOT "$ANDROID_HOME"
+set -gx ANDROID_NDK_HOME "$ANDROID_HOME/ndk/{ndk}"
+fish_add_path "$ANDROID_HOME/cmdline-tools/latest/bin" "$ANDROID_HOME/platform-tools" "$HOME/.cargo/bin"
+```
+
+After editing, reload your shell:
+```bash
+source ~/.bashrc # or source ~/.zshrc
+```
+
+---
+
+## 6. Rust Toolchain for Android (`cargo-ndk` and Targets)
+
+Since {name} has a shared Rust core, the compiler needs the Android targets installed:
+
+```bash
+# Add the Rust cross-compilation targets
+rustup target add \
+  aarch64-linux-android \
+  armv7-linux-androideabi \
+  x86_64-linux-android \
+  i686-linux-android
+
+# Install the cargo-ndk utility
+cargo install cargo-ndk
+```
+
+### Automated Script
+
+The repository ships a script that checks and configures these dependencies automatically:
+
+```bash
+./scripts/setup-android-env.sh
+```
+
+---
+
+## 7. Verifying the Environment
+
+To check that everything is configured correctly:
+
+1. Run the jirau diagnostics:
+   ```bash
+   jirau doctor
+   ```
+2. Test `adb`:
+   ```bash
+   adb devices
+   ```
+3. Test `cargo-ndk`:
+   ```bash
+   cargo ndk --version
+   ```
+4. Test the Rust compiler targets:
+   ```bash
+   rustup target list --installed
+   ```
+5. Run the first Gradle build:
+   ```bash
+   cd android && ./gradlew assembleDebug
+   ```
+"#,
+        name = ctx.name,
+        java = versions::JAVA_LTS,
+        rust = versions::RUST,
+        sdk = versions::ANDROID_COMPILE_SDK,
+        build_tools = versions::ANDROID_BUILD_TOOLS,
+        ndk = versions::ANDROID_NDK,
     )
 }
 
@@ -595,8 +842,8 @@ echo "==> [3/4] Verificando Java (JDK)..."
 if command -v java >/dev/null 2>&1; then
     java -version
 else
-    echo "AVISO: JDK não encontrado. No Debian/Ubuntu execute:"
-    echo "       sudo apt update && sudo apt install -y openjdk-21-jdk"
+    echo "AVISO: JDK não encontrado. Instale com:"
+    echo "       mise install   # JDK do .mise.toml do projeto"
 fi
 
 # 4. Android SDK & NDK
@@ -629,58 +876,76 @@ pub fn root_ci_workflow(ctx: &TemplateContext) -> String {
     let has_android = ctx.platforms.contains(&"android".to_string());
     let has_ios = ctx.platforms.contains(&"ios".to_string());
 
-    let mut android_steps = String::new();
+    let mut android_job = String::new();
     if has_android {
-        android_steps = r#"
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'corretto'
-          java-version: '21'
+        android_job = format!(
+            r#"
+  android:
+    name: Android (Rust core + APK + unit tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: {checkout}
 
-      - name: Cache Gradle Packages
-        uses: actions/cache@v4
+      - name: Set up JDK {java}
+        uses: {setup_java}
         with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+          distribution: temurin
+          java-version: '{java}'
 
-      - name: Run Android Unit Tests
-        run: |
-          if [ -f android/gradlew ]; then
-            cd android && ./gradlew testDebugUnitTest --no-daemon
-          fi
-"#
-        .to_string();
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-linux-android
+
+      - uses: {rust_cache}
+
+      - name: Set up Gradle
+        uses: {setup_gradle}
+
+      # O Gradle chama scripts/build-android-ffi.sh (cargo-ndk + bindings Kotlin).
+      - name: Build APK & run unit tests
+        working-directory: android
+        run: ./gradlew assembleDebug testDebugUnitTest -Pjirau.rustAbis=x86_64
+"#,
+            checkout = versions::ACTION_CHECKOUT,
+            setup_java = versions::ACTION_SETUP_JAVA,
+            rust_cache = versions::ACTION_RUST_CACHE,
+            setup_gradle = versions::ACTION_GRADLE,
+            java = versions::JAVA_LTS,
+        );
     }
 
     let mut ios_job = String::new();
     if has_ios {
         ios_job = format!(
             r#"
-  ios-validation:
-    name: iOS Build Validation
+  ios:
+    name: iOS (Rust core XCFramework + app build)
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: {checkout}
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-ios, aarch64-apple-ios-sim
 
+      - uses: {rust_cache}
+
       - name: Install XcodeGen
         run: brew install xcodegen
 
-      - name: Generate Xcode Project & Build
+      - name: Build Rust core XCFramework & Swift bindings
+        run: ./scripts/build-ios-ffi.sh debug
+
+      - name: Generate Xcode project & build
         run: |
           cd ios
           xcodegen generate
           xcodebuild -project {pascal_name}.xcodeproj -scheme {pascal_name} -configuration Debug -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO
 "#,
+            checkout = versions::ACTION_CHECKOUT,
+            rust_cache = versions::ACTION_RUST_CACHE,
             pascal_name = ctx.pascal_name
         );
     }
@@ -695,33 +960,31 @@ on:
     branches: [ "main" ]
 
 jobs:
-  core-and-validation:
-    name: Rust Core & Lint Validation
+  core:
+    name: Rust core (fmt, clippy, tests)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: {checkout}
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
-          targets: aarch64-linux-android, x86_64-linux-android
 
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
+      - uses: {rust_cache}
 
-      - name: Format Check
-        run: cargo fmt --check
+      - name: Format check
+        run: cargo fmt --all --check
 
-      - name: Clippy Lint
-        run: cargo clippy --all-targets -- -D warnings
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
 
-      - name: Run Workspace Tests
+      - name: Tests
         run: cargo test --workspace
-{android_steps}
-{ios_job}
-"#,
-        android_steps = android_steps,
+{android_job}{ios_job}"#,
+        checkout = versions::ACTION_CHECKOUT,
+        rust_cache = versions::ACTION_RUST_CACHE,
+        android_job = android_job,
         ios_job = ios_job
     )
 }

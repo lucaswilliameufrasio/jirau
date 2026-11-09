@@ -1,22 +1,34 @@
 import SwiftUI
 import Observation
 
+// `AppEngine`, `NativeError` e `nativeGreet` vêm do núcleo Rust via UniFFI
+// (ios/Generated, gerado por scripts/build-ios-ffi.sh).
+
 @Observable
-class MainViewModel {
-    var counter: Int = 0
-    var status: String = "Núcleo Rust conectado"
+final class MainViewModel {
+    private let engine: AppEngine
+    private(set) var counter: Int32
+    private(set) var status: String
+
+    init(engine: AppEngine = AppEngine()) {
+        self.engine = engine
+        self.counter = engine.getState().counter
+        self.status = nativeGreet(name: "iOS")
+    }
 
     func increment() {
-        counter += 1
-        status = "Incrementado via Rust StateEngine"
+        counter = engine.increment().counter
+        status = "Incrementado pelo StateEngine em Rust"
     }
 
     func decrement() {
-        if counter > 0 {
-            counter -= 1
-            status = "Decrementado via Rust StateEngine"
-        } else {
-            status = "Erro validado no Rust: valor não pode ser negativo"
+        do {
+            counter = try engine.decrement().counter
+            status = "Decrementado pelo StateEngine em Rust"
+        } catch NativeError.NegativeValue {
+            status = "Rust recusou: o contador não pode ficar negativo"
+        } catch {
+            status = "Erro do núcleo Rust: \(error)"
         }
     }
 }
@@ -31,6 +43,7 @@ struct ContentView: View {
                     Text("🪵 mobile-gradle-starter")
                         .font(.largeTitle)
                         .fontWeight(.bold)
+                        .multilineTextAlignment(.center)
                     Text("UI Nativa iOS em SwiftUI")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
@@ -44,10 +57,12 @@ struct ContentView: View {
                         Text("\(viewModel.counter)")
                             .font(.system(size: 64, weight: .bold, design: .rounded))
                             .foregroundStyle(.tint)
+                            .accessibilityIdentifier("counter")
                         Text(viewModel.status)
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
+                            .accessibilityIdentifier("status")
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
@@ -57,20 +72,22 @@ struct ContentView: View {
                     Button(role: .destructive) {
                         viewModel.decrement()
                     } label: {
-                        Label("Decrementar", systemImage: "minus.circle")
+                        Label("Menos", systemImage: "minus.circle")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.large)
+                    .accessibilityIdentifier("decrement")
 
                     Button {
                         viewModel.increment()
                     } label: {
-                        Label("Incrementar", systemImage: "plus.circle.fill")
+                        Label("Mais", systemImage: "plus.circle.fill")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
+                    .accessibilityIdentifier("increment")
                 }
                 .padding(.horizontal)
 

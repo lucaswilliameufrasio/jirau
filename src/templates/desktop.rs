@@ -1,11 +1,11 @@
-use super::TemplateContext;
+use super::{TemplateContext, versions};
 
 pub fn desktop_cargo_toml(ctx: &TemplateContext) -> String {
     format!(
         r#"[package]
 name = "{slug}-desktop"
 version = "0.1.0"
-edition = "2021"
+edition = "{edition}"
 
 [[bin]]
 name = "{slug}-desktop"
@@ -16,7 +16,8 @@ test = false
 {slug}-core = {{ path = "../{slug}-core" }}
 rune = {{ git = "https://github.com/anomalyco/rune" }}
 "#,
-        slug = ctx.slug
+        slug = ctx.slug,
+        edition = versions::RUST_EDITION
     )
 }
 

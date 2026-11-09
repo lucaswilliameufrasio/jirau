@@ -1,0 +1,11 @@
+# Mensagens compartilhadas (ui.rs, process.rs).
+_version: 2
+ui.banner_title:
+  en: "🪵  jirau — Native Cross-Platform Scaffold CLI"
+  pt-BR: "🪵  jirau — CLI de Scaffold Nativo Multiplataforma"
+process.spawn_failed:
+  en: "Could not run: %{what}"
+  pt-BR: "Não foi possível executar: %{what}"
+process.failed:
+  en: "%{what} failed."
+  pt-BR: "%{what} falhou."

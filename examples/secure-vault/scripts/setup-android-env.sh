@@ -47,8 +47,8 @@ echo "==> [3/4] Verificando Java (JDK)..."
 if command -v java >/dev/null 2>&1; then
     java -version
 else
-    echo "AVISO: JDK não encontrado. No Debian/Ubuntu execute:"
-    echo "       sudo apt update && sudo apt install -y openjdk-21-jdk"
+    echo "AVISO: JDK não encontrado. Instale com:"
+    echo "       mise install   # JDK do .mise.toml do projeto"
 fi
 
 # 4. Android SDK & NDK

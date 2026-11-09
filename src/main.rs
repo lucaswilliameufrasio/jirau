@@ -1,9 +1,13 @@
+mod android_pipeline;
 mod bindings;
 mod build;
 mod cli;
 mod config;
 mod dev;
 mod doctor;
+mod i18n;
+mod ios_pipeline;
+mod process;
 mod run;
 mod scaffold;
 mod templates;
@@ -12,18 +16,22 @@ mod ui;
 pub mod upgrade;
 
 use anyhow::Result;
-use clap::Parser;
-use cli::{AddArgs, Cli, Commands, DevArgs, DoctorArgs, NewArgs, RunArgs, TestArgs, UpgradeArgs};
+use cli::{AddArgs, Commands, DevArgs, DoctorArgs, NewArgs, RunArgs, TestArgs, UpgradeArgs};
 use colored::*;
 use config::JirauConfig;
 use doctor::DoctorEngine;
-use scaffold::Scaffolder;
+use rust_i18n::t;
+use scaffold::{ProjectWriter, Scaffolder};
 use std::env;
 use std::process::Command;
 use templates::TemplateContext;
 
+// Traduções em locales/*.yml (en + pt-BR lado a lado); `en` é o fallback.
+rust_i18n::i18n!("locales", fallback = "en");
+
 fn main() -> Result<()> {
-    let cli = Cli::parse();
+    i18n::init_from_args(std::env::args());
+    let cli = i18n::parse_localized_cli()?;
 
     match cli.command {
         Some(Commands::New(args)) => handle_new(args),
@@ -45,32 +53,30 @@ fn handle_new(args: NewArgs) -> Result<()> {
     let name = match args.name {
         Some(n) if !n.trim().is_empty() => n.trim().to_string(),
         _ if args.non_interactive => {
-            anyhow::bail!(
-                "O nome do projeto é obrigatório em modo não interativo: jirau new <nome>"
-            );
+            anyhow::bail!("{}", t!("main.name_required_non_interactive"));
         }
         _ => {
             let validator = |input: &str| {
                 let trimmed = input.trim();
                 if trimmed.is_empty() {
                     Ok(inquire::validator::Validation::Invalid(
-                        "O nome do projeto não pode ser vazio".into(),
+                        t!("main.name_empty").into_owned().into(),
                     ))
                 } else if !trimmed
                     .chars()
                     .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
                 {
                     Ok(inquire::validator::Validation::Invalid(
-                        "Use apenas letras, números, hífens ou underscores".into(),
+                        t!("main.name_invalid_chars").into_owned().into(),
                     ))
                 } else {
                     Ok(inquire::validator::Validation::Valid)
                 }
             };
 
-            inquire::Text::new("Nome do aplicativo:")
-                .with_placeholder("meu-app")
-                .with_help_message("Identificador do projeto e diretório que será criado")
+            inquire::Text::new(&t!("main.prompt_app_name"))
+                .with_placeholder(&t!("main.prompt_app_name_placeholder"))
+                .with_help_message(&t!("main.prompt_app_name_help"))
                 .with_validator(validator)
                 .prompt()?
         }
@@ -82,9 +88,9 @@ fn handle_new(args: NewArgs) -> Result<()> {
     let package_id = match args.package {
         Some(pkg) if !pkg.trim().is_empty() => pkg.trim().to_string(),
         _ if args.non_interactive => default_package,
-        _ => inquire::Text::new("Package ID / Bundle Identifier:")
+        _ => inquire::Text::new(&t!("main.prompt_package"))
             .with_default(&default_package)
-            .with_help_message("Identificador reverso de domínio para Android e iOS")
+            .with_help_message(&t!("main.prompt_package_help"))
             .prompt()?,
     };
 
@@ -109,13 +115,13 @@ fn handle_new(args: NewArgs) -> Result<()> {
         } else {
             let options = vec!["android", "ios", "desktop"];
             let defaults = vec![0, 1, 2];
-            let selected = inquire::MultiSelect::new("Plataformas suportadas:", options)
+            let selected = inquire::MultiSelect::new(&t!("main.prompt_platforms"), options)
                 .with_default(&defaults)
-                .with_help_message("Pressione Espaço para marcar/desmarcar e Enter para confirmar")
+                .with_help_message(&t!("main.prompt_platforms_help"))
                 .prompt()?;
 
             if selected.is_empty() {
-                anyhow::bail!("Pelo menos uma plataforma deve ser selecionada.");
+                anyhow::bail!("{}", t!("main.platform_required"));
             }
             platforms = selected.into_iter().map(String::from).collect();
         }
@@ -127,63 +133,56 @@ fn handle_new(args: NewArgs) -> Result<()> {
         None if args.sqlite => "sqlite".to_string(),
         None if args.non_interactive => "none".to_string(),
         None => {
-            let options = vec![
-                "Nenhuma (Estado puramente em memória)",
-                "SQLite embutido (rusqlite no core Rust)",
+            // Cada opção traz o valor interno ao lado do texto traduzido.
+            let choices = [
+                ("none", t!("main.storage_option_none")),
+                ("sqlite", t!("main.storage_option_sqlite")),
             ];
-            let choice = inquire::Select::new("Camada de persistência local:", options)
-                .with_help_message("Escolha a camada de armazenamento de dados no core Rust")
-                .prompt()?;
-            if choice.contains("SQLite") {
-                "sqlite".to_string()
-            } else {
-                "none".to_string()
-            }
+            let labels: Vec<&str> = choices.iter().map(|(_, label)| label.as_ref()).collect();
+            let choice = inquire::Select::new(&t!("main.prompt_storage"), labels)
+                .with_help_message(&t!("main.prompt_storage_help"))
+                .raw_prompt()?;
+            choices[choice.index].0.to_string()
         }
     };
 
-    // Sistema de build Android (Gradle / Amper)
-    let android_build_system = match args.android_build_system {
+    // Sistema de build Android: Gradle (Kotlin DSL + version catalog).
+    // O JetBrains Amper saiu do jirau: o modo plugin do Gradle foi descontinuado
+    // e o Amper standalone ainda não tem versão estável (1.0).
+    let requested_build_system = match args.android_build_system {
         Some(s) => s.to_lowercase(),
         None if args.amper => "amper".to_string(),
-        None if args.non_interactive => "gradle".to_string(),
-        None if platforms.contains(&"android".to_string()) => {
-            let options = vec![
-                "Gradle (Padrão do ecossistema Android com Kotlin DSL)",
-                "Amper (Configuração declarativa moderna da JetBrains)",
-            ];
-            let choice = inquire::Select::new("Sistema de build Android:", options)
-                .with_help_message("Escolha entre o Gradle tradicional ou o JetBrains Amper")
-                .prompt()?;
-            if choice.contains("Amper") {
-                "amper".to_string()
-            } else {
-                "gradle".to_string()
-            }
-        }
         None => "gradle".to_string(),
     };
+    if requested_build_system != "gradle" {
+        anyhow::bail!(
+            "{}",
+            t!(
+                "main.build_system_unsupported",
+                name = requested_build_system
+            )
+        );
+    }
+    let android_build_system = requested_build_system;
 
     // Tema de UI
     let ui_theme = match args.theme {
         Some(t) => t.to_lowercase(),
         None if args.non_interactive => "default".to_string(),
         None => {
-            let options = vec![
-                "Padrão (Nativo puro com Material 3 / Human Interface)",
-                "Material 3 Estendido (Paleta customizável, Dark Mode e Tokens)",
-                "Minimalista (Tipografia e layout enxuto)",
+            let choices = [
+                ("default", t!("main.theme_option_default")),
+                (
+                    "material3-extended",
+                    t!("main.theme_option_material3_extended"),
+                ),
+                ("minimal", t!("main.theme_option_minimal")),
             ];
-            let choice = inquire::Select::new("Tema visual e kit de design:", options)
-                .with_help_message("Escolha a base visual das interfaces mobile e desktop")
-                .prompt()?;
-            if choice.contains("Material 3 Estendido") {
-                "material3-extended".to_string()
-            } else if choice.contains("Minimalista") {
-                "minimal".to_string()
-            } else {
-                "default".to_string()
-            }
+            let labels: Vec<&str> = choices.iter().map(|(_, label)| label.as_ref()).collect();
+            let choice = inquire::Select::new(&t!("main.prompt_theme"), labels)
+                .with_help_message(&t!("main.prompt_theme_help"))
+                .raw_prompt()?;
+            choices[choice.index].0.to_string()
         }
     };
     let plugins = args.plugin;
@@ -193,18 +192,15 @@ fn handle_new(args: NewArgs) -> Result<()> {
         Some(t) => t.to_lowercase(),
         None if args.non_interactive => "starter".to_string(),
         None => {
-            let options = vec![
-                "Starter (Contador simples e arquitetura de baseline)",
-                "Secure Vault (Cofre real de senhas, notas e tokens com SQLite)",
+            let choices = [
+                ("starter", t!("main.template_option_starter")),
+                ("vault", t!("main.template_option_vault")),
             ];
-            let choice = inquire::Select::new("Selecione o template da aplicação:", options)
-                .with_help_message("Escolha entre o starter inicial ou o cofre real e funcional")
-                .prompt()?;
-            if choice.contains("Secure Vault") {
-                "vault".to_string()
-            } else {
-                "starter".to_string()
-            }
+            let labels: Vec<&str> = choices.iter().map(|(_, label)| label.as_ref()).collect();
+            let choice = inquire::Select::new(&t!("main.prompt_template"), labels)
+                .with_help_message(&t!("main.prompt_template_help"))
+                .raw_prompt()?;
+            choices[choice.index].0.to_string()
         }
     };
 
@@ -215,23 +211,35 @@ fn handle_new(args: NewArgs) -> Result<()> {
     };
 
     println!();
-    ui::print_step("Configuração do projeto:");
-    ui::print_substep(&format!("Nome: {}", name.cyan().bold()));
-    ui::print_substep(&format!("Template: {}", app_template.cyan().bold()));
-    ui::print_substep(&format!("Package ID: {}", package_id.cyan()));
-    ui::print_substep(&format!("Plataformas: {}", platforms.join(", ").cyan()));
-    ui::print_substep(&format!("Persistência: {}", storage.cyan()));
+    ui::print_step(&t!("main.summary_title"));
+    ui::print_substep(&t!("main.summary_name", value = name.cyan().bold()));
+    ui::print_substep(&t!(
+        "main.summary_template",
+        value = app_template.cyan().bold()
+    ));
+    ui::print_substep(&t!("main.summary_package", value = package_id.cyan()));
+    ui::print_substep(&t!(
+        "main.summary_platforms",
+        value = platforms.join(", ").cyan()
+    ));
+    ui::print_substep(&t!("main.summary_storage", value = storage.cyan()));
     if platforms.contains(&"android".to_string()) {
-        ui::print_substep(&format!("Build Android: {}", android_build_system.cyan()));
+        ui::print_substep(&t!(
+            "main.summary_android_build",
+            value = android_build_system.cyan()
+        ));
     }
-    ui::print_substep(&format!("Tema de UI: {}", ui_theme.cyan()));
+    ui::print_substep(&t!("main.summary_theme", value = ui_theme.cyan()));
     if !plugins.is_empty() {
-        ui::print_substep(&format!("Plugins: {}", plugins.join(", ").cyan()));
+        ui::print_substep(&t!(
+            "main.summary_plugins",
+            value = plugins.join(", ").cyan()
+        ));
     }
     if args.ci {
-        ui::print_substep(&format!(
-            "CI/CD: {}",
-            "GitHub Actions (.github/workflows/ci.yml)".cyan()
+        ui::print_substep(&t!(
+            "main.summary_ci",
+            value = "GitHub Actions (.github/workflows/ci.yml)".cyan()
         ));
     }
     println!();
@@ -252,38 +260,43 @@ fn handle_new(args: NewArgs) -> Result<()> {
     Scaffolder::create_project(&ctx, &current_dir)?;
 
     println!();
-    println!("{}", "🎉 Projeto configurado com sucesso!".green().bold());
+    println!("{}", t!("main.project_ready").green().bold());
     println!(
         "{}",
         "══════════════════════════════════════════════════════════".cyan()
     );
-    println!("Para começar:");
+    println!("{}", t!("main.next_steps"));
     println!("  {} {}", "cd".cyan(), ctx.slug.bold());
     println!(
-        "  {}        # Valida seu ambiente local",
-        "jirau doctor".cyan()
+        "  {}        # {}",
+        "jirau doctor".cyan(),
+        t!("main.next_doctor")
     );
     if platforms.contains(&"android".to_string()) {
         println!(
-            "  {}    # Inicia o desenvolvimento Android",
-            "jirau dev android".cyan()
+            "  {}    # {}",
+            "jirau dev android".cyan(),
+            t!("main.next_dev_android")
         );
     }
     if platforms.contains(&"ios".to_string()) {
         println!(
-            "  {}        # Inicia o desenvolvimento iOS",
-            "jirau dev ios".cyan()
+            "  {}        # {}",
+            "jirau dev ios".cyan(),
+            t!("main.next_dev_ios")
         );
     }
     if platforms.contains(&"desktop".to_string()) {
         println!(
-            "  {}    # Inicia o app Desktop (Rune UI)",
-            "jirau dev desktop".cyan()
+            "  {}    # {}",
+            "jirau dev desktop".cyan(),
+            t!("main.next_dev_desktop")
         );
     }
     println!(
-        "  {}      # Roda testes unitários do core Rust no host",
-        "cargo test".cyan()
+        "  {}      # {}",
+        "cargo test".cyan(),
+        t!("main.next_cargo_test")
     );
     println!(
         "{}",
@@ -310,7 +323,7 @@ fn handle_doctor(args: DoctorArgs) -> Result<()> {
     DoctorEngine::print_report(&report);
 
     if args.profile {
-        ui::print_step("Executando profiling de build do Gradle (--profile)...");
+        ui::print_step(&t!("main.profile_running"));
         let (root, _cfg) = JirauConfig::find_in_current_or_parent()?;
         let android_dir = root.join("android");
 
@@ -329,17 +342,20 @@ fn handle_doctor(args: DoctorArgs) -> Result<()> {
 
                 match status {
                     Ok(s) if s.success() => {
-                        ui::print_success("Relatório gerado em: android/build/reports/profile/");
+                        ui::print_success(&t!(
+                            "main.profile_report",
+                            path = "android/build/reports/profile/"
+                        ));
                     }
                     _ => {
-                        ui::print_warning("Falha ao rodar profiling do Gradle.");
+                        ui::print_warning(&t!("main.profile_failed"));
                     }
                 }
             } else {
-                ui::print_warning("gradlew não encontrado na pasta android/.");
+                ui::print_warning(&t!("main.profile_no_gradlew"));
             }
         } else {
-            ui::print_warning("Pasta android/ não encontrada para profiling.");
+            ui::print_warning(&t!("main.profile_no_android_dir"));
         }
     }
 
@@ -385,22 +401,19 @@ fn handle_add(args: AddArgs) -> Result<()> {
         Some(p) => p.to_lowercase(),
         None => {
             let options = vec!["desktop", "android", "ios"];
-            inquire::Select::new("Qual plataforma deseja adicionar?", options)
-                .with_help_message("Escolha com as setas e pressione Enter")
+            inquire::Select::new(&t!("main.prompt_add_platform"), options)
+                .with_help_message(&t!("main.prompt_add_platform_help"))
                 .prompt()?
                 .to_string()
         }
     };
 
     if config.app.platforms.contains(&platform) {
-        ui::print_warning(&format!(
-            "A plataforma '{}' já faz parte deste projeto.",
-            platform
-        ));
+        ui::print_warning(&t!("main.add_already_present", platform = platform));
         return Ok(());
     }
 
-    let ctx = TemplateContext::with_options(
+    let mut ctx = TemplateContext::with_options(
         &config.app.name,
         &config.app.package_id,
         vec![platform.clone()],
@@ -408,22 +421,13 @@ fn handle_add(args: AddArgs) -> Result<()> {
         &config.app.android_build_system,
         &config.meta.template_version,
     );
-    let spinner = ui::create_spinner("Configurando nova plataforma...");
+    ctx.app_template = config.app.template.clone();
+    let spinner = ui::create_spinner(&t!("main.add_configuring"));
 
+    let mut writer = ProjectWriter::new(&root_dir);
     match platform.as_str() {
         "desktop" => {
-            let desktop_dir = root_dir
-                .join("crates")
-                .join(format!("{}-desktop", ctx.slug));
-            std::fs::create_dir_all(desktop_dir.join("src"))?;
-            std::fs::write(
-                desktop_dir.join("Cargo.toml"),
-                templates::desktop::desktop_cargo_toml(&ctx),
-            )?;
-            std::fs::write(
-                desktop_dir.join("src/main.rs"),
-                templates::desktop::desktop_main_rs(&ctx),
-            )?;
+            Scaffolder::write_desktop(&ctx, &mut writer)?;
 
             // Atualiza workspace members no Cargo.toml raiz
             let cargo_toml_path = root_dir.join("Cargo.toml");
@@ -437,106 +441,29 @@ fn handle_add(args: AddArgs) -> Result<()> {
                 std::fs::write(&cargo_toml_path, updated)?;
             }
         }
-        "android" => {
-            let android_dir = root_dir.join("android");
-            let app_dir = android_dir.join("app");
-            let pkg_src_dir = app_dir.join("src/main/java").join(&ctx.package_path);
-            let jni_libs_dir = app_dir.join("src/main/jniLibs");
-            let gradle_toml_dir = android_dir.join("gradle");
-
-            std::fs::create_dir_all(&pkg_src_dir)?;
-            std::fs::create_dir_all(&jni_libs_dir)?;
-            std::fs::create_dir_all(&gradle_toml_dir)?;
-
-            std::fs::write(
-                android_dir.join("settings.gradle.kts"),
-                templates::android::settings_gradle_kts(&ctx),
-            )?;
-            std::fs::write(
-                android_dir.join("gradle.properties"),
-                templates::android::gradle_properties(),
-            )?;
-            std::fs::write(
-                android_dir.join("build.gradle.kts"),
-                templates::android::root_build_gradle_kts(),
-            )?;
-            std::fs::write(
-                gradle_toml_dir.join("libs.versions.toml"),
-                templates::android::libs_versions_toml(),
-            )?;
-            std::fs::write(
-                app_dir.join("build.gradle.kts"),
-                templates::android::app_build_gradle_kts(&ctx),
-            )?;
-            std::fs::write(
-                app_dir.join("src/main/AndroidManifest.xml"),
-                templates::android::app_android_manifest_xml(&ctx),
-            )?;
-            std::fs::write(
-                pkg_src_dir.join("MainActivity.kt"),
-                templates::android::app_main_activity_kt(&ctx),
-            )?;
-
-            if config.app.android_build_system == "amper" {
-                std::fs::write(
-                    android_dir.join("module.yaml"),
-                    templates::android::amper_module_yaml(&ctx),
-                )?;
-                std::fs::write(
-                    android_dir.join("project.yaml"),
-                    templates::android::amper_project_yaml(),
-                )?;
-                let amper_script = android_dir.join("amper");
-                std::fs::write(&amper_script, templates::android::amper_wrapper_sh())?;
-                #[cfg(unix)]
-                {
-                    use std::os::unix::fs::PermissionsExt;
-                    let _ = std::fs::set_permissions(
-                        &amper_script,
-                        std::fs::Permissions::from_mode(0o755),
-                    );
-                }
+        "android" | "ios" => {
+            if platform == "android" {
+                Scaffolder::write_android(&ctx, &mut writer)?;
+            } else {
+                Scaffolder::write_ios(&ctx, &mut writer)?;
             }
-        }
-        "ios" => {
-            let ios_dir = root_dir.join("ios");
-            let sources_dir = ios_dir.join("App/Sources");
-            let gen_dir = ios_dir.join("Generated");
-
-            std::fs::create_dir_all(&sources_dir)?;
-            std::fs::create_dir_all(&gen_dir)?;
-
-            std::fs::write(
-                ios_dir.join("project.yml"),
-                templates::ios::project_yml(&ctx),
-            )?;
-            std::fs::write(
-                sources_dir.join("ContentView.swift"),
-                templates::ios::content_view_swift(&ctx),
-            )?;
-            std::fs::write(
-                sources_dir.join(format!("{}App.swift", ctx.pascal_name)),
-                templates::ios::app_swift(&ctx),
+            // Projetos antigos não têm o binário uniffi-bindgen da crate FFI.
+            writer.write_if_missing(
+                format!("crates/{}-ffi/src/bin/uniffi-bindgen.rs", ctx.slug),
+                &templates::rust_ffi::ffi_uniffi_bindgen_rs(),
             )?;
         }
-        other => anyhow::bail!(
-            "Plataforma '{}' não suportada. Use 'desktop', 'android' ou 'ios'.",
-            other
-        ),
+        other => anyhow::bail!("{}", t!("main.add_unsupported", platform = other)),
     }
+    // Registra o que foi gerado como base do 3-way merge do `jirau upgrade`.
+    writer.save_template_base()?;
 
     config.app.platforms.push(platform.clone());
     config.write_to_dir(&root_dir)?;
 
-    ui::finish_spinner_success(
-        &spinner,
-        &format!("Plataforma '{}' adicionada com sucesso!", platform),
-    );
+    ui::finish_spinner_success(&spinner, &t!("main.add_success", platform = platform));
     println!();
-    ui::print_info(&format!(
-        "Execute 'jirau dev {}' para testar a nova plataforma.",
-        platform
-    ));
+    ui::print_info(&t!("main.add_next", platform = platform));
     println!();
 
     Ok(())
@@ -545,69 +472,76 @@ fn handle_add(args: AddArgs) -> Result<()> {
 fn handle_interactive_menu() -> Result<()> {
     ui::print_banner();
 
-    let options = vec![
-        "🪵  Criar um novo projeto (new)",
-        "▶️   Executar no dispositivo/emulador (run)",
-        "🧪  Executar testes unitários e de integração (test)",
-        "➕  Adicionar plataforma a um projeto existente (add)",
-        "🩺  Diagnosticar ambiente e ferramentas (doctor)",
-        "🚀  Iniciar ciclo de desenvolvimento (dev)",
-        "🔗  Regerar bindings UniFFI (bindings)",
-        "📦  Compilar binários para release (build)",
-        "🔄  Sincronizar template via 3-way merge (upgrade)",
-        "🚪  Sair",
+    // A ação de cada item do menu é decidida pela posição, não pelo texto
+    // (que muda conforme o idioma).
+    #[derive(Clone, Copy)]
+    enum MenuAction {
+        New,
+        Run,
+        Test,
+        Add,
+        Doctor,
+        Dev,
+        Bindings,
+        Build,
+        Upgrade,
+        Exit,
+    }
+    let entries = [
+        (MenuAction::New, t!("main.menu_new")),
+        (MenuAction::Run, t!("main.menu_run")),
+        (MenuAction::Test, t!("main.menu_test")),
+        (MenuAction::Add, t!("main.menu_add")),
+        (MenuAction::Doctor, t!("main.menu_doctor")),
+        (MenuAction::Dev, t!("main.menu_dev")),
+        (MenuAction::Bindings, t!("main.menu_bindings")),
+        (MenuAction::Build, t!("main.menu_build")),
+        (MenuAction::Upgrade, t!("main.menu_upgrade")),
+        (MenuAction::Exit, t!("main.menu_exit")),
     ];
+    let labels: Vec<&str> = entries.iter().map(|(_, label)| label.as_ref()).collect();
 
-    let choice = inquire::Select::new("O que você deseja fazer?", options)
-        .with_help_message("Use as setas ↑/↓ e pressione Enter")
-        .prompt();
+    let choice = inquire::Select::new(&t!("main.menu_prompt"), labels)
+        .with_help_message(&t!("main.menu_help"))
+        .raw_prompt();
 
     match choice {
-        Ok(selected) => {
-            if selected.contains("Criar um novo projeto") {
-                handle_new(NewArgs {
-                    name: None,
-                    package: None,
-                    android: false,
-                    ios: false,
-                    desktop: false,
-                    storage: None,
-                    sqlite: false,
-                    android_build_system: None,
-                    amper: false,
-                    theme: None,
-                    plugin: Vec::new(),
-                    template: None,
-                    ci: false,
-                    non_interactive: false,
-                })
-            } else if selected.contains("Executar no dispositivo") {
-                handle_run(RunArgs::default())
-            } else if selected.contains("Executar testes") {
-                handle_test(TestArgs::default())
-            } else if selected.contains("Adicionar plataforma") {
-                handle_add(AddArgs { platform: None })
-            } else if selected.contains("Diagnosticar ambiente") {
-                handle_doctor(DoctorArgs {
-                    json: false,
-                    profile: false,
-                })
-            } else if selected.contains("Iniciar ciclo de desenvolvimento") {
-                handle_dev(DevArgs {
-                    platform: None,
-                    no_watch: false,
-                })
-            } else if selected.contains("Regerar bindings") {
-                handle_bindings(None)
-            } else if selected.contains("Compilar binários") {
-                handle_build(None, true)
-            } else if selected.contains("Sincronizar template") {
-                upgrade::run_upgrade(&UpgradeArgs::default())
-            } else {
-                println!("Até logo!");
+        Ok(selected) => match entries[selected.index].0 {
+            MenuAction::New => handle_new(NewArgs {
+                name: None,
+                package: None,
+                android: false,
+                ios: false,
+                desktop: false,
+                storage: None,
+                sqlite: false,
+                android_build_system: None,
+                amper: false,
+                theme: None,
+                plugin: Vec::new(),
+                template: None,
+                ci: false,
+                non_interactive: false,
+            }),
+            MenuAction::Run => handle_run(RunArgs::default()),
+            MenuAction::Test => handle_test(TestArgs::default()),
+            MenuAction::Add => handle_add(AddArgs { platform: None }),
+            MenuAction::Doctor => handle_doctor(DoctorArgs {
+                json: false,
+                profile: false,
+            }),
+            MenuAction::Dev => handle_dev(DevArgs {
+                platform: None,
+                no_watch: false,
+            }),
+            MenuAction::Bindings => handle_bindings(None),
+            MenuAction::Build => handle_build(None, true),
+            MenuAction::Upgrade => upgrade::run_upgrade(&UpgradeArgs::default()),
+            MenuAction::Exit => {
+                println!("{}", t!("main.goodbye"));
                 Ok(())
             }
-        }
+        },
         Err(_) => Ok(()),
     }
 }

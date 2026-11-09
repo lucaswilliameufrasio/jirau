@@ -1,0 +1,171 @@
+# Mensagens de doctor.rs (jirau doctor). Os campos e valores de status do
+# `--json` não são traduzidos; apenas títulos, detalhes e dicas.
+_version: 2
+doctor.rustc_title:
+  en: "Rust compiler (rustc)"
+  pt-BR: "Compilador Rust (rustc)"
+doctor.rustc_missing:
+  en: "rustc not found in PATH"
+  pt-BR: "rustc não encontrado no PATH"
+doctor.cargo_title:
+  en: "Cargo package manager"
+  pt-BR: "Gerenciador de Pacotes Cargo"
+doctor.cargo_missing:
+  en: "cargo not found in PATH"
+  pt-BR: "cargo não encontrado no PATH"
+doctor.cargo_hint:
+  en: "Install rustup to get cargo"
+  pt-BR: "Instale o rustup para obter o cargo"
+doctor.android_targets_title:
+  en: "Rust Android targets"
+  pt-BR: "Targets Rust Android"
+doctor.ios_targets_title:
+  en: "Rust iOS targets"
+  pt-BR: "Targets Rust iOS"
+doctor.targets_installed:
+  en: "Installed: %{targets}"
+  pt-BR: "Instalados: %{targets}"
+doctor.targets_missing:
+  en: "Missing: %{targets}"
+  pt-BR: "Faltando: %{targets}"
+doctor.cargo_ndk_title:
+  en: "cargo-ndk (Android builds)"
+  pt-BR: "cargo-ndk (compilação Android)"
+doctor.available_in_path:
+  en: "Available in PATH"
+  pt-BR: "Disponível no PATH"
+doctor.cargo_ndk_missing:
+  en: "cargo-ndk utility not found"
+  pt-BR: "Utilitário cargo-ndk não encontrado"
+doctor.java_installed:
+  en: "Java installed"
+  pt-BR: "Java instalado"
+doctor.jdk_missing:
+  en: "JDK not found in PATH"
+  pt-BR: "JDK não encontrado no PATH"
+doctor.jdk_hint:
+  en: "Install OpenJDK 17 or 21 (e.g. sudo apt install openjdk-17-jdk)"
+  pt-BR: "Instale o OpenJDK 17 ou 21 (ex: sudo apt install openjdk-17-jdk)"
+doctor.sdk_located:
+  en: "Located at %{path}"
+  pt-BR: "Localizado em %{path}"
+doctor.sdk_located_default:
+  en: "Located in the default directory %{path}"
+  pt-BR: "Localizado no diretório padrão %{path}"
+doctor.sdk_export_hint:
+  en: "Tip: run export ANDROID_HOME=%{path} in your shell for command-line tools"
+  pt-BR: "Dica: Exporte export ANDROID_HOME=%{path} no seu shell para ferramentas de linha de comando"
+doctor.ndk_located:
+  en: "NDK located"
+  pt-BR: "NDK localizado"
+doctor.ndk_missing:
+  en: "NDK not found in %{path}/ndk"
+  pt-BR: "NDK não encontrado em %{path}/ndk"
+doctor.ndk_hint:
+  en: "Install the NDK with sdkmanager 'ndk;27.2.12479018' or from the Android Studio SDK Manager"
+  pt-BR: "Instale o NDK via sdkmanager 'ndk;27.2.12479018' ou pelo Android Studio SDK Manager"
+doctor.sdk_missing:
+  en: "$ANDROID_HOME is not set and the SDK was not found in the default location"
+  pt-BR: "Variável $ANDROID_HOME não definida e SDK não encontrado no caminho padrão"
+doctor.sdk_hint:
+  en: "For headless/CLI Debian/Linux servers: see docs/setup-android.md or install via sdkmanager. For desktop: install Android Studio and set export ANDROID_HOME=$HOME/Android/Sdk"
+  pt-BR: "Para servidores headless/CLI Debian/Linux: consulte docs/setup-android.md ou instale via sdkmanager. Para desktop: instale o Android Studio e defina export ANDROID_HOME=$HOME/Android/Sdk"
+doctor.adb_no_devices:
+  en: "adb available (no devices connected)"
+  pt-BR: "adb disponível (nenhum dispositivo conectado)"
+doctor.adb_devices:
+  en: "adb available (%{count} device(s): %{devices})"
+  pt-BR: "adb disponível (%{count} dispositivo(s): %{devices})"
+doctor.adb_missing:
+  en: "adb not found in PATH"
+  pt-BR: "adb não encontrado no PATH"
+doctor.adb_hint:
+  en: "Add $ANDROID_HOME/platform-tools to your PATH"
+  pt-BR: "Adicione $ANDROID_HOME/platform-tools ao seu PATH"
+doctor.ios_env_title:
+  en: "iOS environment (macOS)"
+  pt-BR: "Ambiente iOS (macOS)"
+doctor.ios_env_linux:
+  en: "Running on Linux. iOS projects with XcodeGen can be generated, but the final build requires macOS + Xcode."
+  pt-BR: "Executando em Linux. Projetos iOS com XcodeGen podem ser gerados, mas a compilação final requer macOS + Xcode."
+doctor.xcode_configured:
+  en: "Configured at %{path}"
+  pt-BR: "Configurado em %{path}"
+doctor.xcode_missing:
+  en: "Xcode not selected"
+  pt-BR: "Xcode não selecionado"
+doctor.xcode_hint:
+  en: "xcode-select --install or install the full Xcode from the App Store"
+  pt-BR: "xcode-select --install ou instale o Xcode completo pela App Store"
+doctor.xcodegen_missing:
+  en: "XcodeGen not found. Required to generate the .xcodeproj without conflicts."
+  pt-BR: "XcodeGen não encontrado. Necessário para gerar o .xcodeproj sem conflitos."
+doctor.simctl_title:
+  en: "iOS Simulator (simctl)"
+  pt-BR: "Simulador iOS (simctl)"
+doctor.simctl_ok:
+  en: "simctl working (%{count} simulator(s) running)"
+  pt-BR: "simctl operacional (%{count} simulador(es) em execução)"
+doctor.simctl_failed:
+  en: "Could not list simulators via xcrun simctl"
+  pt-BR: "Não foi possível listar simuladores via xcrun simctl"
+doctor.macos_arch_title:
+  en: "macOS architecture (Apple Silicon)"
+  pt-BR: "Arquitetura macOS (Apple Silicon)"
+doctor.macos_arm64_ok:
+  en: "Apple Silicon (ARM64) processor supported"
+  pt-BR: "Processador Apple Silicon (ARM64) suportado"
+doctor.macos_intel:
+  en: "Intel macOS detected. jirau supports Apple Silicon (ARM64) only."
+  pt-BR: "macOS Intel detectado. O jirau suporta exclusivamente Apple Silicon (ARM64)."
+doctor.macos_intel_hint:
+  en: "Run on an Apple Silicon machine (M1/M2/M3/M4) to build for macOS."
+  pt-BR: "Execute em uma máquina Apple Silicon (M1/M2/M3/M4) para compilar para macOS."
+doctor.linux_desktop_title:
+  en: "Linux desktop toolchain (Rune / GPU)"
+  pt-BR: "Toolchain Desktop Linux (Rune / GPU)"
+doctor.pkg_config_ok:
+  en: "pkg-config present for graphics dependencies"
+  pt-BR: "pkg-config presente para dependências gráficas"
+doctor.pkg_config_missing:
+  en: "pkg-config not found (recommended to build wgpu/wayland)"
+  pt-BR: "pkg-config não encontrado (recomendado para compilar wgpu/wayland)"
+doctor.windows_desktop_title:
+  en: "Windows desktop environment"
+  pt-BR: "Ambiente Windows Desktop"
+doctor.windows_desktop_ok:
+  en: "Windows x64 supported via Rune UI / DirectX / Vulkan"
+  pt-BR: "Windows x64 suportado via Rune UI / DirectX / Vulkan"
+doctor.category_tooling:
+  en: "Optimization"
+  pt-BR: "Otimização"
+doctor.sccache_title:
+  en: "sccache (C/Rust build cache)"
+  pt-BR: "sccache (Cache de Compilação C/Rust)"
+doctor.sccache_ok:
+  en: "Available in PATH (speeds up repeated builds)"
+  pt-BR: "Disponível no PATH (acelera compilações repetidas)"
+doctor.sccache_missing:
+  en: "Not installed (optional, but highly recommended)"
+  pt-BR: "Não instalado (opcional, porém altamente recomendado)"
+doctor.report_title:
+  en: "jirau doctor environment diagnostics"
+  pt-BR: "Diagnóstico do Ambiente jirau doctor"
+doctor.suggestion:
+  en: "Suggestion:"
+  pt-BR: "Sugestão:"
+doctor.solution:
+  en: "Fix:"
+  pt-BR: "Solução:"
+doctor.run_command:
+  en: "run %{command}"
+  pt-BR: "Execute: %{command}"
+doctor.all_ready:
+  en: "All set! Your environment has all the required tools."
+  pt-BR: "Tudo pronto! Seu ambiente possui todas as ferramentas necessárias."
+doctor.ready_with_warnings:
+  en: "Environment ready for most workflows, with %{count} optional warning(s)."
+  pt-BR: "Ambiente pronto para a maioria dos fluxos, com %{count} aviso(s) opcionais."
+doctor.has_errors:
+  en: "%{count} required issue(s) found. Run the suggested commands above to fix them."
+  pt-BR: "Foram identificadas %{count} pendência(s) obrigatória(s). Execute os comandos sugeridos acima para resolver."

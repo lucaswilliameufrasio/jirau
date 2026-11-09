@@ -10,12 +10,14 @@ pluginManagement {
         mavenCentral()
         gradlePluginPortal()
     }
-    plugins {
-        id("org.jetbrains.amper.settings.plugin") version "0.5.0"
-    }
 }
-plugins {
-    id("org.jetbrains.amper.settings.plugin")
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
 }
 
 rootProject.name = "all-platforms-showcase"
+include(":app")

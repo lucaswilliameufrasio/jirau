@@ -1,5 +1,5 @@
-use std::sync::Mutex;
 use secure_vault_core as core;
+use std::sync::Mutex;
 
 uniffi::setup_scaffolding!();
 
@@ -62,6 +62,36 @@ impl From<core::VaultItem> for NativeVaultItem {
     }
 }
 
+/// Dados para criar ou atualizar um item (`id` vazio cria um novo).
+#[derive(uniffi::Record)]
+pub struct NativeVaultItemInput {
+    #[uniffi(default = None)]
+    pub id: Option<String>,
+    pub title: String,
+    pub category: NativeCategory,
+    #[uniffi(default = None)]
+    pub username: Option<String>,
+    pub secret_payload: String,
+    #[uniffi(default = [])]
+    pub tags: Vec<String>,
+    #[uniffi(default = false)]
+    pub is_favorite: bool,
+}
+
+impl From<NativeVaultItemInput> for core::VaultItemInput {
+    fn from(i: NativeVaultItemInput) -> Self {
+        Self {
+            id: i.id,
+            title: i.title,
+            category: i.category.into(),
+            username: i.username,
+            secret_payload: i.secret_payload,
+            tags: i.tags,
+            is_favorite: i.is_favorite,
+        }
+    }
+}
+
 #[derive(uniffi::Record)]
 pub struct NativeVaultStats {
     pub total_items: u32,
@@ -115,17 +145,28 @@ impl From<core::PasswordEvaluation> for NativePasswordEvaluation {
 
 #[derive(uniffi::Error, Debug)]
 pub enum NativeVaultError {
-    Database { message: String },
-    NotFound { id: String },
+    Database {
+        // Não pode se chamar `message`: colide com Throwable.message no Kotlin.
+        detail: String,
+    },
+    NotFound {
+        id: String,
+    },
     InvalidInput,
+    /// A chave não tem 32 bytes.
+    InvalidKey,
+    /// Chave diferente da usada para criar o cofre (ou dados adulterados).
+    WrongKeyOrCorrupted,
 }
 
 impl From<core::VaultError> for NativeVaultError {
     fn from(err: core::VaultError) -> Self {
         match err {
-            core::VaultError::DatabaseError(msg) => NativeVaultError::Database { message: msg },
+            core::VaultError::DatabaseError(msg) => NativeVaultError::Database { detail: msg },
             core::VaultError::NotFound(id) => NativeVaultError::NotFound { id },
             core::VaultError::InvalidInput => NativeVaultError::InvalidInput,
+            core::VaultError::InvalidKey => NativeVaultError::InvalidKey,
+            core::VaultError::WrongKeyOrCorrupted => NativeVaultError::WrongKeyOrCorrupted,
         }
     }
 }
@@ -148,28 +189,29 @@ impl NativeVaultEngine {
     #[uniffi::constructor]
     pub fn in_memory() -> Result<Self, NativeVaultError> {
         let engine = core::VaultEngine::in_memory().map_err(NativeVaultError::from)?;
-        Ok(Self { inner: Mutex::new(engine) })
+        Ok(Self {
+            inner: Mutex::new(engine),
+        })
     }
 
+    /// Abre o cofre em disco. `key` (32 bytes) deve vir do cofre de chaves da
+    /// plataforma (Keychain / Android Keystore) e ser sempre a mesma.
     #[uniffi::constructor]
-    pub fn open(path: String) -> Result<Self, NativeVaultError> {
-        let engine = core::VaultEngine::open(&path).map_err(NativeVaultError::from)?;
-        Ok(Self { inner: Mutex::new(engine) })
+    pub fn open(path: String, key: Vec<u8>) -> Result<Self, NativeVaultError> {
+        let engine = core::VaultEngine::open(&path, &key).map_err(NativeVaultError::from)?;
+        Ok(Self {
+            inner: Mutex::new(engine),
+        })
     }
 
+    /// Cria (`input.id == None`) ou atualiza um item; o segredo é cifrado no Rust.
     pub fn save_item(
         &self,
-        id: Option<String>,
-        title: String,
-        category: NativeCategory,
-        username: Option<String>,
-        secret_payload: String,
-        tags: Vec<String>,
-        is_favorite: bool,
+        input: NativeVaultItemInput,
     ) -> Result<NativeVaultItem, NativeVaultError> {
         let engine = self.inner.lock().unwrap();
         let item = engine
-            .save_item(id, title, category.into(), username, secret_payload, tags, is_favorite)
+            .save_item(input.into())
             .map_err(NativeVaultError::from)?;
         Ok(item.into())
     }
@@ -208,6 +250,12 @@ impl NativeVaultEngine {
         let stats = engine.get_stats().map_err(NativeVaultError::from)?;
         Ok(stats.into())
     }
+}
+
+/// Gera uma nova chave de 32 bytes para o cofre (CSPRNG do sistema).
+#[uniffi::export]
+pub fn generate_vault_key() -> Vec<u8> {
+    core::generate_vault_key()
 }
 
 #[uniffi::export]

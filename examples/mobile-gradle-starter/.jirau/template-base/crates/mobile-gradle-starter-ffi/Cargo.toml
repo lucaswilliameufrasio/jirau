@@ -1,0 +1,12 @@
+[package]
+name = "mobile-gradle-starter-ffi"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "staticlib", "rlib"]
+name = "mobile_gradle_starter_ffi"
+
+[dependencies]
+mobile-gradle-starter-core = { path = "../mobile-gradle-starter-core" }
+uniffi = { version = "0.32", features = ["cli"] }

@@ -1,0 +1,13 @@
+[package]
+name = "all-platforms-showcase-desktop"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "all-platforms-showcase-desktop"
+path = "src/main.rs"
+test = false
+
+[dependencies]
+all-platforms-showcase-core = { path = "../all-platforms-showcase-core" }
+rune = { git = "https://github.com/anomalyco/rune" }

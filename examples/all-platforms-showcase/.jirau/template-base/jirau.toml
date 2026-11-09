@@ -1,0 +1,18 @@
+[app]
+name = "all-platforms-showcase"
+package_id = "com.example.showcase"
+version = "0.1.0"
+platforms = ["android", "ios", "desktop"]
+storage = "sqlite"
+android_build_system = "gradle"
+ui_theme = "material3-extended"
+plugins = ["logger", "analytics"]
+template = "starter"
+
+[dev]
+default_android_abi = "arm64-v8a"
+default_ios_simulator = "iPhone 16"
+use_sccache = true
+
+[meta]
+template_version = "0.4.0"

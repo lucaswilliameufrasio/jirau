@@ -1,29 +1,29 @@
-# Diretrizes de Testes — all-platforms-showcase
+# Testing Guidelines — all-platforms-showcase
 
-Este repositório adota a metodologia de testes rápidos em camada:
+This repository follows a fast, layered testing methodology:
 
-1. **Núcleo em Rust (`crates/all-platforms-showcase-core`)**:
-   - Testes unitários puros executados diretamente no host via `cargo test`.
-   - Não dependem de emulador, simulador, Android NDK ou UniFFI.
-   - Meta de execução: < 500 ms.
+1. **Rust core (`crates/all-platforms-showcase-core`)**:
+   - Pure unit tests run directly on the host via `cargo test`.
+   - They do not depend on an emulator, simulator, Android NDK or UniFFI.
+   - Execution target: < 500 ms.
 
-2. **Camada FFI (`crates/all-platforms-showcase-ffi`)**:
-   - Validação da integridade dos bindings gerados e serialização de tipos primitivos/complexos.
+2. **FFI layer (`crates/all-platforms-showcase-ffi`)**:
+   - Validates the integrity of the generated bindings and the serialization of primitive/complex types.
 
 3. **Android (`android/app`)**:
-   - Testes unitários com JUnit 5 + Mockito para ViewModels.
-   - Previews no Jetpack Compose para validação visual estática.
+   - Unit tests with JUnit 5 + Mockito for ViewModels.
+   - Jetpack Compose previews for static visual validation.
 
 4. **iOS (`ios/App`)**:
-   - XCTest unitário para modelos `@Observable`.
-   - Previews no SwiftUI Canvas.
+   - XCTest unit tests for `@Observable` models.
+   - SwiftUI Canvas previews.
 
 5. **Desktop (`crates/all-platforms-showcase-desktop`)**:
-   - UI nativa renderizada em GPU com Rune (anomalyco/rune).
-   - Reutiliza a crate `all-platforms-showcase-core` diretamente em Rust, sem overhead de FFI.
-   - Execução local: `cargo run --package all-platforms-showcase-desktop`.
+   - Native GPU-rendered UI with Rune (anomalyco/rune).
+   - Reuses the `all-platforms-showcase-core` crate directly in Rust, with no FFI overhead.
+   - Run locally: `cargo run --package all-platforms-showcase-desktop`.
 
-Execute no host:
+Run on the host:
 ```bash
 cargo test --workspace
 ```

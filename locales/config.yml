@@ -1,0 +1,20 @@
+# Mensagens de config.rs (leitura/escrita do jirau.toml).
+_version: 2
+config.current_dir_failed:
+  en: "Could not determine the current directory"
+  pt-BR: "Não foi possível obter o diretório atual"
+config.read_failed:
+  en: "Failed to read %{path}"
+  pt-BR: "Falha ao ler %{path}"
+config.parse_failed:
+  en: "Failed to parse %{path}"
+  pt-BR: "Falha ao parsear %{path}"
+config.not_found:
+  en: "No '%{file}' file was found in the current directory or any parent directory.\nRun this command from the root of a jirau project, or use 'jirau new <name>' to create a new one."
+  pt-BR: "Nenhum arquivo '%{file}' foi encontrado no diretório atual nem nos superiores.\nExecute este comando na raiz de um projeto jirau ou use 'jirau new <nome>' para criar um novo projeto."
+config.serialize_failed:
+  en: "Failed to serialize the jirau.toml configuration"
+  pt-BR: "Falha ao serializar configuração jirau.toml"
+config.write_failed:
+  en: "Failed to write %{path}"
+  pt-BR: "Falha ao escrever %{path}"

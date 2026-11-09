@@ -7,7 +7,6 @@ pub enum CoreError {
     NegativeValue,
     #[error("O título não pode ser vazio")]
     EmptyTitle,
-
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -70,7 +69,10 @@ impl Default for StateEngine {
 }
 
 pub fn greet(name: &str) -> String {
-    format!("Olá, {}! Rodando diretamente do núcleo em Rust.", name.trim())
+    format!(
+        "Olá, {}! Rodando diretamente do núcleo em Rust.",
+        name.trim()
+    )
 }
 
 #[cfg(test)]
@@ -93,7 +95,9 @@ mod tests {
         let s1 = engine.increment();
         assert_eq!(s1.counter, 1);
 
-        let s2 = engine.decrement().expect("decrement deve funcionar acima de zero");
+        let s2 = engine
+            .decrement()
+            .expect("decrement deve funcionar acima de zero");
         assert_eq!(s2.counter, 0);
 
         let err = engine.decrement().unwrap_err();
@@ -108,5 +112,4 @@ mod tests {
         let s = engine.update_title("Novo App").expect("título válido");
         assert_eq!(s.title, "Novo App");
     }
-
 }

@@ -1,0 +1,41 @@
+# Mensagens de `jirau bindings` (bindings.rs).
+_version: 2
+bindings.regenerating:
+  en: "Regenerating UniFFI bindings for Kotlin and Swift..."
+  pt-BR: "Regerando bindings UniFFI para Kotlin e Swift..."
+bindings.ffi_not_found:
+  en: "Could not find the FFI definition at %{path}"
+  pt-BR: "Não foi possível encontrar a definição FFI em %{path}"
+bindings.bindgen_missing:
+  en: "crates/%{pkg}/src/bin/uniffi-bindgen.rs not found. Run 'jirau upgrade --force' to add it."
+  pt-BR: "crates/%{pkg}/src/bin/uniffi-bindgen.rs não encontrado. Rode 'jirau upgrade --force' para adicioná-lo."
+bindings.swift_ready:
+  en: "Swift bindings generated at %{path}"
+  pt-BR: "Bindings Swift gerados em %{path}"
+bindings.done:
+  en: "Bindings processing finished."
+  pt-BR: "Processamento de bindings finalizado."
+bindings.generating:
+  en: "Generating %{language} bindings..."
+  pt-BR: "Gerando bindings %{language}..."
+bindings.cargo_build_spawn_failed:
+  en: "Failed to run cargo build"
+  pt-BR: "Falha ao executar cargo build"
+bindings.host_build_failed:
+  en: "Failed to compile the FFI crate for the host."
+  pt-BR: "Falha ao compilar a crate FFI para o host."
+bindings.cargo_build_failed:
+  en: "cargo build -p %{pkg} failed."
+  pt-BR: "cargo build -p %{pkg} falhou."
+bindings.bindgen_spawn_failed:
+  en: "Failed to run uniffi-bindgen"
+  pt-BR: "Falha ao executar uniffi-bindgen"
+bindings.generated:
+  en: "%{language} bindings generated."
+  pt-BR: "Bindings %{language} gerados."
+bindings.generate_failed:
+  en: "Failed to generate %{language} bindings."
+  pt-BR: "Falha ao gerar bindings %{language}."
+bindings.bindgen_failed:
+  en: "uniffi-bindgen (%{language}) failed."
+  pt-BR: "uniffi-bindgen (%{language}) falhou."

@@ -1,0 +1,203 @@
+# Mensagens de main.rs (new, add, doctor --profile e menu interativo).
+_version: 2
+main.name_required_non_interactive:
+  en: "A project name is required in non-interactive mode: jirau new <name>"
+  pt-BR: "O nome do projeto é obrigatório em modo não interativo: jirau new <nome>"
+main.name_empty:
+  en: "The project name cannot be empty"
+  pt-BR: "O nome do projeto não pode ser vazio"
+main.name_invalid_chars:
+  en: "Use only letters, numbers, hyphens or underscores"
+  pt-BR: "Use apenas letras, números, hífens ou underscores"
+main.prompt_app_name:
+  en: "App name:"
+  pt-BR: "Nome do aplicativo:"
+main.prompt_app_name_placeholder:
+  en: "my-app"
+  pt-BR: "meu-app"
+main.prompt_app_name_help:
+  en: "Project identifier and the name of the directory that will be created"
+  pt-BR: "Identificador do projeto e diretório que será criado"
+main.prompt_package:
+  en: "Package ID / Bundle Identifier:"
+  pt-BR: "Package ID / Bundle Identifier:"
+main.prompt_package_help:
+  en: "Reverse-domain identifier for Android and iOS"
+  pt-BR: "Identificador reverso de domínio para Android e iOS"
+main.prompt_platforms:
+  en: "Supported platforms:"
+  pt-BR: "Plataformas suportadas:"
+main.prompt_platforms_help:
+  en: "Press Space to toggle and Enter to confirm"
+  pt-BR: "Pressione Espaço para marcar/desmarcar e Enter para confirmar"
+main.platform_required:
+  en: "At least one platform must be selected."
+  pt-BR: "Pelo menos uma plataforma deve ser selecionada."
+main.storage_option_none:
+  en: "None (pure in-memory state)"
+  pt-BR: "Nenhuma (Estado puramente em memória)"
+main.storage_option_sqlite:
+  en: "Embedded SQLite (rusqlite in the Rust core)"
+  pt-BR: "SQLite embutido (rusqlite no core Rust)"
+main.prompt_storage:
+  en: "Local persistence layer:"
+  pt-BR: "Camada de persistência local:"
+main.prompt_storage_help:
+  en: "Choose the data storage layer for the Rust core"
+  pt-BR: "Escolha a camada de armazenamento de dados no core Rust"
+main.build_system_unsupported:
+  en: "Android build system '%{name}' is not supported. jirau generates Gradle projects: the JetBrains Amper Gradle plugin has been discontinued and standalone Amper does not have a stable release yet."
+  pt-BR: "Sistema de build Android '%{name}' não é suportado. O jirau gera projetos Gradle: o plugin Gradle do JetBrains Amper foi descontinuado e o Amper standalone ainda não tem versão estável."
+main.theme_option_default:
+  en: "Default (pure native with Material 3 / Human Interface)"
+  pt-BR: "Padrão (Nativo puro com Material 3 / Human Interface)"
+main.theme_option_material3_extended:
+  en: "Material 3 Extended (customizable palette, dark mode and tokens)"
+  pt-BR: "Material 3 Estendido (Paleta customizável, Dark Mode e Tokens)"
+main.theme_option_minimal:
+  en: "Minimalist (lean typography and layout)"
+  pt-BR: "Minimalista (Tipografia e layout enxuto)"
+main.prompt_theme:
+  en: "Visual theme and design kit:"
+  pt-BR: "Tema visual e kit de design:"
+main.prompt_theme_help:
+  en: "Choose the visual foundation for the mobile and desktop UIs"
+  pt-BR: "Escolha a base visual das interfaces mobile e desktop"
+main.template_option_starter:
+  en: "Starter (simple counter and baseline architecture)"
+  pt-BR: "Starter (Contador simples e arquitetura de baseline)"
+main.template_option_vault:
+  en: "Secure Vault (a real vault for passwords, notes and tokens backed by SQLite)"
+  pt-BR: "Secure Vault (Cofre real de senhas, notas e tokens com SQLite)"
+main.prompt_template:
+  en: "Select the app template:"
+  pt-BR: "Selecione o template da aplicação:"
+main.prompt_template_help:
+  en: "Choose between the basic starter and the fully working vault"
+  pt-BR: "Escolha entre o starter inicial ou o cofre real e funcional"
+main.summary_title:
+  en: "Project configuration:"
+  pt-BR: "Configuração do projeto:"
+main.summary_name:
+  en: "Name: %{value}"
+  pt-BR: "Nome: %{value}"
+main.summary_template:
+  en: "Template: %{value}"
+  pt-BR: "Template: %{value}"
+main.summary_package:
+  en: "Package ID: %{value}"
+  pt-BR: "Package ID: %{value}"
+main.summary_platforms:
+  en: "Platforms: %{value}"
+  pt-BR: "Plataformas: %{value}"
+main.summary_storage:
+  en: "Persistence: %{value}"
+  pt-BR: "Persistência: %{value}"
+main.summary_android_build:
+  en: "Android build: %{value}"
+  pt-BR: "Build Android: %{value}"
+main.summary_theme:
+  en: "UI theme: %{value}"
+  pt-BR: "Tema de UI: %{value}"
+main.summary_plugins:
+  en: "Plugins: %{value}"
+  pt-BR: "Plugins: %{value}"
+main.summary_ci:
+  en: "CI/CD: %{value}"
+  pt-BR: "CI/CD: %{value}"
+main.project_ready:
+  en: "🎉 Project set up successfully!"
+  pt-BR: "🎉 Projeto configurado com sucesso!"
+main.next_steps:
+  en: "To get started:"
+  pt-BR: "Para começar:"
+main.next_doctor:
+  en: "Check your local environment"
+  pt-BR: "Valida seu ambiente local"
+main.next_dev_android:
+  en: "Start Android development"
+  pt-BR: "Inicia o desenvolvimento Android"
+main.next_dev_ios:
+  en: "Start iOS development"
+  pt-BR: "Inicia o desenvolvimento iOS"
+main.next_dev_desktop:
+  en: "Start the desktop app (Rune UI)"
+  pt-BR: "Inicia o app Desktop (Rune UI)"
+main.next_cargo_test:
+  en: "Run the Rust core unit tests on the host"
+  pt-BR: "Roda testes unitários do core Rust no host"
+main.profile_running:
+  en: "Running Gradle build profiling (--profile)..."
+  pt-BR: "Executando profiling de build do Gradle (--profile)..."
+main.profile_report:
+  en: "Report generated at: %{path}"
+  pt-BR: "Relatório gerado em: %{path}"
+main.profile_failed:
+  en: "Gradle profiling failed."
+  pt-BR: "Falha ao rodar profiling do Gradle."
+main.profile_no_gradlew:
+  en: "gradlew not found in the android/ folder."
+  pt-BR: "gradlew não encontrado na pasta android/."
+main.profile_no_android_dir:
+  en: "android/ folder not found for profiling."
+  pt-BR: "Pasta android/ não encontrada para profiling."
+main.prompt_add_platform:
+  en: "Which platform do you want to add?"
+  pt-BR: "Qual plataforma deseja adicionar?"
+main.prompt_add_platform_help:
+  en: "Use the arrow keys and press Enter"
+  pt-BR: "Escolha com as setas e pressione Enter"
+main.add_already_present:
+  en: "Platform '%{platform}' is already part of this project."
+  pt-BR: "A plataforma '%{platform}' já faz parte deste projeto."
+main.add_configuring:
+  en: "Setting up the new platform..."
+  pt-BR: "Configurando nova plataforma..."
+main.add_unsupported:
+  en: "Platform '%{platform}' is not supported. Use 'desktop', 'android' or 'ios'."
+  pt-BR: "Plataforma '%{platform}' não suportada. Use 'desktop', 'android' ou 'ios'."
+main.add_success:
+  en: "Platform '%{platform}' added successfully!"
+  pt-BR: "Plataforma '%{platform}' adicionada com sucesso!"
+main.add_next:
+  en: "Run 'jirau dev %{platform}' to try out the new platform."
+  pt-BR: "Execute 'jirau dev %{platform}' para testar a nova plataforma."
+main.menu_new:
+  en: "🪵  Create a new project (new)"
+  pt-BR: "🪵  Criar um novo projeto (new)"
+main.menu_run:
+  en: "▶️   Run on a device/emulator (run)"
+  pt-BR: "▶️   Executar no dispositivo/emulador (run)"
+main.menu_test:
+  en: "🧪  Run unit and integration tests (test)"
+  pt-BR: "🧪  Executar testes unitários e de integração (test)"
+main.menu_add:
+  en: "➕  Add a platform to an existing project (add)"
+  pt-BR: "➕  Adicionar plataforma a um projeto existente (add)"
+main.menu_doctor:
+  en: "🩺  Diagnose environment and tools (doctor)"
+  pt-BR: "🩺  Diagnosticar ambiente e ferramentas (doctor)"
+main.menu_dev:
+  en: "🚀  Start the development loop (dev)"
+  pt-BR: "🚀  Iniciar ciclo de desenvolvimento (dev)"
+main.menu_bindings:
+  en: "🔗  Regenerate UniFFI bindings (bindings)"
+  pt-BR: "🔗  Regerar bindings UniFFI (bindings)"
+main.menu_build:
+  en: "📦  Build release binaries (build)"
+  pt-BR: "📦  Compilar binários para release (build)"
+main.menu_upgrade:
+  en: "🔄  Sync template via 3-way merge (upgrade)"
+  pt-BR: "🔄  Sincronizar template via 3-way merge (upgrade)"
+main.menu_exit:
+  en: "🚪  Exit"
+  pt-BR: "🚪  Sair"
+main.menu_prompt:
+  en: "What would you like to do?"
+  pt-BR: "O que você deseja fazer?"
+main.menu_help:
+  en: "Use the ↑/↓ arrows and press Enter"
+  pt-BR: "Use as setas ↑/↓ e pressione Enter"
+main.goodbye:
+  en: "See you!"
+  pt-BR: "Até logo!"

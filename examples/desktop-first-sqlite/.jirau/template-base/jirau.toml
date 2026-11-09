@@ -1,0 +1,18 @@
+[app]
+name = "desktop-first-sqlite"
+package_id = "com.example.desktop"
+version = "0.1.0"
+platforms = ["desktop"]
+storage = "sqlite"
+android_build_system = "gradle"
+ui_theme = "default"
+plugins = []
+template = "starter"
+
+[dev]
+default_android_abi = "arm64-v8a"
+default_ios_simulator = "iPhone 16"
+use_sccache = true
+
+[meta]
+template_version = "0.4.0"

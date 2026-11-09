@@ -1,11 +1,11 @@
-use super::TemplateContext;
+use super::{TemplateContext, versions};
 
 pub fn ffi_cargo_toml(ctx: &TemplateContext) -> String {
     format!(
         r#"[package]
 name = "{slug}-ffi"
 version = "0.1.0"
-edition = "2021"
+edition = "{edition}"
 
 [lib]
 crate-type = ["cdylib", "staticlib", "rlib"]
@@ -13,13 +13,12 @@ name = "{rust_name}_ffi"
 
 [dependencies]
 {slug}-core = {{ path = "../{slug}-core" }}
-uniffi = {{ version = "0.28", features = ["cli"] }}
-
-[build-dependencies]
-uniffi = {{ version = "0.28", features = ["build"] }}
+uniffi = {{ version = "{uniffi}", features = ["cli"] }}
 "#,
         slug = ctx.slug,
-        rust_name = ctx.rust_name
+        rust_name = ctx.rust_name,
+        edition = versions::RUST_EDITION,
+        uniffi = versions::UNIFFI,
     )
 }
 
@@ -36,9 +35,11 @@ module_name = "{pascal_name}FFI"
     )
 }
 
-pub fn ffi_build_rs() -> String {
+/// Binário `uniffi-bindgen` da própria crate FFI: garante que os bindings sejam
+/// gerados pela mesma versão do UniFFI usada para compilar a biblioteca.
+pub fn ffi_uniffi_bindgen_rs() -> String {
     r#"fn main() {
-    uniffi::generate_scaffolding("src/lib.rs").unwrap_or_default();
+    uniffi::uniffi_bindgen_main()
 }
 "#
     .to_string()
@@ -176,13 +177,13 @@ impl NativeStorage {
     };
 
     let storage_error_enum = if ctx.storage == "sqlite" {
-        r#"    StorageError { message: String },"#
+        r#"    StorageError { detail: String },"#
     } else {
         ""
     };
 
     let storage_error_match = if ctx.storage == "sqlite" {
-        r#"            core::CoreError::StorageError(msg) => NativeError::StorageError { message: msg },"#
+        r#"            core::CoreError::StorageError(msg) => NativeError::StorageError { detail: msg },"#
     } else {
         ""
     };
@@ -193,7 +194,7 @@ use {rust_name}_core as core;
 
 uniffi::setup_scaffolding!();
 
-#[derive(uniffi::Record)]
+#[derive(uniffi::Record, Debug, Clone, PartialEq, Eq)]
 pub struct NativeAppState {{
     pub counter: i32,
     pub title: String,
@@ -236,6 +237,12 @@ impl std::error::Error for NativeError {{}}
 #[derive(uniffi::Object)]
 pub struct AppEngine {{
     inner: Mutex<core::StateEngine>,
+}}
+
+impl Default for AppEngine {{
+    fn default() -> Self {{
+        Self::new()
+    }}
 }}
 
 #[uniffi::export]

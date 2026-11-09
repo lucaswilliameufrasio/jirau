@@ -2,6 +2,7 @@ use crate::config::JirauConfig;
 use crate::ui;
 use anyhow::Result;
 use colored::*;
+use rust_i18n::t;
 use std::path::Path;
 use std::process::Command;
 use std::time::Instant;
@@ -24,10 +25,7 @@ impl TestRunner {
         all: bool,
     ) -> Result<()> {
         ui::print_banner();
-        println!(
-            "{}",
-            "🧪 Suíte de Testes Jirau Multiplataforma".cyan().bold()
-        );
+        println!("{}", t!("test_runner.title").cyan().bold());
         println!("{}", "═".repeat(60));
 
         let mut results = Vec::new();
@@ -66,7 +64,7 @@ impl TestRunner {
 
         // Summary report
         println!("\n{}", "═".repeat(60));
-        println!("{}", "Resumo dos Testes:".bold());
+        println!("{}", t!("test_runner.summary_title").bold());
         let mut all_passed = true;
 
         for r in &results {
@@ -92,18 +90,15 @@ impl TestRunner {
         println!("{}", "═".repeat(60));
 
         if all_passed {
-            println!(
-                "{}",
-                "Todos os testes passaram com sucesso! 🎉".green().bold()
-            );
+            println!("{}", t!("test_runner.all_passed").green().bold());
             Ok(())
         } else {
-            anyhow::bail!("Falha em uma ou mais suítes de testes.");
+            anyhow::bail!("{}", t!("test_runner.some_failed"));
         }
     }
 
     fn run_rust_core_tests(root_dir: &Path) -> Result<TestResultItem> {
-        let spinner = ui::create_spinner("Executando testes unitários do Rust Core no host...");
+        let spinner = ui::create_spinner(&t!("test_runner.core_running"));
         let start = Instant::now();
 
         let out = Command::new("cargo")
@@ -117,18 +112,18 @@ impl TestRunner {
             Ok(o) if o.status.success() => {
                 ui::finish_spinner_success(
                     &spinner,
-                    &format!("Testes do Rust Core concluídos em {:.2}s!", duration),
+                    &t!("test_runner.core_done", secs = format!("{:.2}", duration)),
                 );
                 Ok(TestResultItem {
                     name: "Rust Core Workspace".to_string(),
                     duration_secs: duration,
                     passed: true,
-                    details: "Testes unitários puros executados no host (< 500ms)".to_string(),
+                    details: t!("test_runner.core_details").into_owned(),
                 })
             }
             Ok(o) => {
                 let err_msg = String::from_utf8_lossy(&o.stderr);
-                ui::finish_spinner_error(&spinner, "Falha nos testes do Rust Core.");
+                ui::finish_spinner_error(&spinner, &t!("test_runner.core_failed"));
                 Ok(TestResultItem {
                     name: "Rust Core Workspace".to_string(),
                     duration_secs: duration,
@@ -137,7 +132,7 @@ impl TestRunner {
                 })
             }
             Err(e) => {
-                ui::finish_spinner_error(&spinner, "Erro ao invocar cargo test.");
+                ui::finish_spinner_error(&spinner, &t!("test_runner.core_spawn_failed"));
                 Ok(TestResultItem {
                     name: "Rust Core Workspace".to_string(),
                     duration_secs: duration,
@@ -153,10 +148,7 @@ impl TestRunner {
             "{}-ffi",
             config.app.name.to_lowercase().replace(['_', ' '], "-")
         );
-        let spinner = ui::create_spinner(&format!(
-            "Executando testes de integração FFI ({pkg})...",
-            pkg = ffi_pkg
-        ));
+        let spinner = ui::create_spinner(&t!("test_runner.ffi_running", pkg = ffi_pkg));
         let start = Instant::now();
 
         let out = Command::new("cargo")
@@ -170,30 +162,29 @@ impl TestRunner {
             Ok(o) if o.status.success() => {
                 ui::finish_spinner_success(
                     &spinner,
-                    &format!("Testes FFI concluídos em {:.2}s!", duration),
+                    &t!("test_runner.ffi_done", secs = format!("{:.2}", duration)),
                 );
                 Ok(TestResultItem {
-                    name: "Camada FFI (UniFFI)".to_string(),
+                    name: t!("test_runner.ffi_name").into_owned(),
                     duration_secs: duration,
                     passed: true,
-                    details: "Lifecycle, serialização de tipos e concorrência validados"
-                        .to_string(),
+                    details: t!("test_runner.ffi_details").into_owned(),
                 })
             }
             Ok(o) => {
                 let err_msg = String::from_utf8_lossy(&o.stderr);
-                ui::finish_spinner_error(&spinner, "Falha nos testes da camada FFI.");
+                ui::finish_spinner_error(&spinner, &t!("test_runner.ffi_failed"));
                 Ok(TestResultItem {
-                    name: "Camada FFI (UniFFI)".to_string(),
+                    name: t!("test_runner.ffi_name").into_owned(),
                     duration_secs: duration,
                     passed: false,
                     details: err_msg.lines().take(3).collect::<Vec<_>>().join(" "),
                 })
             }
             Err(e) => {
-                ui::finish_spinner_error(&spinner, "Erro ao invocar testes FFI.");
+                ui::finish_spinner_error(&spinner, &t!("test_runner.ffi_spawn_failed"));
                 Ok(TestResultItem {
-                    name: "Camada FFI (UniFFI)".to_string(),
+                    name: t!("test_runner.ffi_name").into_owned(),
                     duration_secs: duration,
                     passed: false,
                     details: e.to_string(),
@@ -202,153 +193,147 @@ impl TestRunner {
         }
     }
 
+    /// Testes instrumentados no dispositivo/emulador conectado: ViewModel,
+    /// Keystore e UI Compose rodando contra o núcleo Rust real.
     fn run_android_tests(root_dir: &Path) -> Result<TestResultItem> {
-        let android_dir = root_dir.join("android");
-        let gradlew = if cfg!(windows) {
-            android_dir.join("gradlew.bat")
-        } else {
-            android_dir.join("gradlew")
-        };
-
-        if !gradlew.exists() && which::which("gradle").is_err() {
-            return Ok(TestResultItem {
-                name: "Android Unit Tests (JUnit)".to_string(),
-                duration_secs: 0.0,
-                passed: true,
-                details: "Ignorado (Gradle Wrapper não gerado em android/)".to_string(),
-            });
-        }
-
-        let gradle_cmd = if gradlew.exists() {
-            gradlew.to_str().unwrap().to_string()
-        } else {
-            "gradle".to_string()
-        };
-
-        let spinner =
-            ui::create_spinner("Executando testes unitários Android (JUnit 5 / Compose)...");
+        const NAME: &str = "Android Instrumented Tests (Compose + Rust)";
         let start = Instant::now();
+        let failed = |details: String| TestResultItem {
+            name: NAME.to_string(),
+            duration_secs: start.elapsed().as_secs_f32(),
+            passed: false,
+            details,
+        };
 
-        let out = Command::new(&gradle_cmd)
-            .current_dir(&android_dir)
-            .args([":app:testDebugUnitTest"])
-            .output();
+        let devices = crate::run::RunEngine::list_android_devices();
+        let Some(dev) = devices.first() else {
+            return Ok(failed(t!("test_runner.android_no_device").into_owned()));
+        };
 
-        let duration = start.elapsed().as_secs_f32();
-
-        match out {
-            Ok(o) if o.status.success() => {
-                ui::finish_spinner_success(
-                    &spinner,
-                    &format!("Testes Android concluídos em {:.2}s!", duration),
-                );
+        let spinner = ui::create_spinner(&t!(
+            "test_runner.android_running",
+            model = dev.model,
+            serial = dev.serial
+        ));
+        match crate::android_pipeline::run_instrumented_tests(root_dir, dev) {
+            Ok(summary) => {
+                ui::finish_spinner_success(&spinner, &t!("test_runner.android_done"));
                 Ok(TestResultItem {
-                    name: "Android Unit Tests (JUnit)".to_string(),
-                    duration_secs: duration,
+                    name: NAME.to_string(),
+                    duration_secs: start.elapsed().as_secs_f32(),
                     passed: true,
-                    details: "ViewModels e testes de UI estáticos passaram com sucesso".to_string(),
-                })
-            }
-            Ok(_) => {
-                ui::finish_spinner_warning(
-                    &spinner,
-                    "Aviso nos testes Android (ambiente pode precisar do Gradle sync).",
-                );
-                Ok(TestResultItem {
-                    name: "Android Unit Tests (JUnit)".to_string(),
-                    duration_secs: duration,
-                    passed: true,
-                    details: "Aviso de execução (rode './gradlew test' na pasta android/)"
-                        .to_string(),
+                    details: summary,
                 })
             }
             Err(e) => {
-                ui::finish_spinner_error(&spinner, "Erro ao executar Gradle.");
-                Ok(TestResultItem {
-                    name: "Android Unit Tests (JUnit)".to_string(),
-                    duration_secs: duration,
-                    passed: false,
-                    details: e.to_string(),
-                })
+                ui::finish_spinner_error(&spinner, &t!("test_runner.android_failed"));
+                Ok(failed(format!("{:#}", e)))
             }
         }
     }
 
     fn run_ios_tests(root_dir: &Path, config: &JirauConfig) -> Result<TestResultItem> {
+        const NAME: &str = "iOS Unit Tests (XCTest)";
         if !cfg!(target_os = "macos") {
             return Ok(TestResultItem {
-                name: "iOS Unit Tests (XCTest)".to_string(),
+                name: NAME.to_string(),
                 duration_secs: 0.0,
                 passed: true,
-                details: "Ignorado (executando em Linux; testes iOS requerem macOS)".to_string(),
+                details: t!("test_runner.ios_skipped").into_owned(),
             });
         }
 
-        let ios_dir = root_dir.join("ios");
-        let project_name = config
-            .app
-            .name
-            .split(['-', '_', ' '])
-            .map(|w| {
-                let mut c = w.chars();
-                match c.next() {
-                    None => String::new(),
-                    Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
-                }
-            })
-            .collect::<String>();
-
-        let spinner = ui::create_spinner("Executando testes XCTest do app iOS via xcodebuild...");
         let start = Instant::now();
+        let failed = |details: String, start: Instant| TestResultItem {
+            name: NAME.to_string(),
+            duration_secs: start.elapsed().as_secs_f32(),
+            passed: false,
+            details,
+        };
+
+        // Usa o simulador ligado (ou o primeiro disponível) em vez de um modelo fixo.
+        let sims = crate::run::RunEngine::list_ios_simulators();
+        let sim = match sims
+            .iter()
+            .find(|s| s.state.eq_ignore_ascii_case("booted"))
+            .or_else(|| sims.iter().find(|s| s.name.starts_with("iPhone")))
+        {
+            Some(sim) => sim.clone(),
+            None => {
+                return Ok(failed(
+                    t!("test_runner.ios_no_simulator").into_owned(),
+                    start,
+                ));
+            }
+        };
+
+        let prepared = crate::ios_pipeline::ensure_booted(&sim)
+            .and_then(|_| crate::ios_pipeline::build_ffi(root_dir, false))
+            .and_then(|_| crate::ios_pipeline::generate_xcode_project(root_dir));
+        if let Err(e) = prepared {
+            return Ok(failed(format!("{:#}", e), start));
+        }
+
+        let names = crate::ios_pipeline::IosNames::from_config(config);
+        let ios_dir = root_dir.join("ios");
+        let spinner = ui::create_spinner(&t!("test_runner.ios_running", name = sim.name));
 
         let out = Command::new("xcodebuild")
             .current_dir(&ios_dir)
+            .arg("test")
+            .args(["-project", &format!("{}.xcodeproj", names.pascal_name)])
+            .args(["-scheme", &names.pascal_name])
             .args([
-                "test",
-                "-project",
-                &format!("{}.xcodeproj", project_name),
-                "-scheme",
-                &project_name,
                 "-destination",
-                "platform=iOS Simulator,name=iPhone 16",
+                &format!("platform=iOS Simulator,id={}", sim.udid),
             ])
+            .arg("-derivedDataPath")
+            .arg(ios_dir.join("DerivedData"))
             .output();
 
         let duration = start.elapsed().as_secs_f32();
-
         match out {
-            Ok(o) if o.status.success() => {
-                ui::finish_spinner_success(
-                    &spinner,
-                    &format!("Testes iOS concluídos em {:.2}s!", duration),
-                );
-                Ok(TestResultItem {
-                    name: "iOS Unit Tests (XCTest)".to_string(),
-                    duration_secs: duration,
-                    passed: true,
-                    details: "Modelos @Observable e testes de UI passaram".to_string(),
-                })
-            }
-            Ok(_) => {
-                ui::finish_spinner_warning(
-                    &spinner,
-                    "Simulador iPhone 16 pode não estar inicializado.",
-                );
-                Ok(TestResultItem {
-                    name: "iOS Unit Tests (XCTest)".to_string(),
-                    duration_secs: duration,
-                    passed: true,
-                    details: "Aviso de simulador (inicie o Simulador no Xcode)".to_string(),
-                })
+            Ok(o) => {
+                let log = String::from_utf8_lossy(&o.stdout);
+                let summary = log
+                    .lines()
+                    .rev()
+                    .find(|l| l.trim_start().starts_with("Executed "))
+                    .map(|l| l.trim().to_string())
+                    .unwrap_or_default();
+                if o.status.success() {
+                    ui::finish_spinner_success(
+                        &spinner,
+                        &t!("test_runner.ios_done", secs = format!("{:.2}", duration)),
+                    );
+                    Ok(TestResultItem {
+                        name: NAME.to_string(),
+                        duration_secs: duration,
+                        passed: true,
+                        details: summary,
+                    })
+                } else {
+                    ui::finish_spinner_error(&spinner, &t!("test_runner.ios_failed"));
+                    let failures: Vec<&str> = log
+                        .lines()
+                        .filter(|l| l.contains("error:") || l.contains("' failed ("))
+                        .take(10)
+                        .collect();
+                    Ok(TestResultItem {
+                        name: NAME.to_string(),
+                        duration_secs: duration,
+                        passed: false,
+                        details: if failures.is_empty() {
+                            summary
+                        } else {
+                            failures.join("\n")
+                        },
+                    })
+                }
             }
             Err(e) => {
-                ui::finish_spinner_error(&spinner, "Erro ao invocar xcodebuild.");
-                Ok(TestResultItem {
-                    name: "iOS Unit Tests (XCTest)".to_string(),
-                    duration_secs: duration,
-                    passed: false,
-                    details: e.to_string(),
-                })
+                ui::finish_spinner_error(&spinner, &t!("test_runner.ios_spawn_failed"));
+                Ok(failed(e.to_string(), start))
             }
         }
     }
@@ -358,10 +343,7 @@ impl TestRunner {
             "{}-desktop",
             config.app.name.to_lowercase().replace(['_', ' '], "-")
         );
-        let spinner = ui::create_spinner(&format!(
-            "Verificando compilação do Desktop ({pkg})...",
-            pkg = pkg_name
-        ));
+        let spinner = ui::create_spinner(&t!("test_runner.desktop_running", pkg = pkg_name));
         let start = Instant::now();
 
         let out = Command::new("cargo")
@@ -375,18 +357,21 @@ impl TestRunner {
             Ok(o) if o.status.success() => {
                 ui::finish_spinner_success(
                     &spinner,
-                    &format!("Desktop validado em {:.2}s!", duration),
+                    &t!(
+                        "test_runner.desktop_done",
+                        secs = format!("{:.2}", duration)
+                    ),
                 );
                 Ok(TestResultItem {
                     name: "Desktop (Rune UI)".to_string(),
                     duration_secs: duration,
                     passed: true,
-                    details: "Crate desktop compila e tipagens Rune estão corretas".to_string(),
+                    details: t!("test_runner.desktop_details").into_owned(),
                 })
             }
             Ok(o) => {
                 let err_msg = String::from_utf8_lossy(&o.stderr);
-                ui::finish_spinner_error(&spinner, "Falha na validação do Desktop.");
+                ui::finish_spinner_error(&spinner, &t!("test_runner.desktop_failed"));
                 Ok(TestResultItem {
                     name: "Desktop (Rune UI)".to_string(),
                     duration_secs: duration,
@@ -395,7 +380,7 @@ impl TestRunner {
                 })
             }
             Err(e) => {
-                ui::finish_spinner_error(&spinner, "Erro ao checar desktop.");
+                ui::finish_spinner_error(&spinner, &t!("test_runner.desktop_spawn_failed"));
                 Ok(TestResultItem {
                     name: "Desktop (Rune UI)".to_string(),
                     duration_secs: duration,

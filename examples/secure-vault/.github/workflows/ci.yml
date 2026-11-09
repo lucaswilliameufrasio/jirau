@@ -7,70 +7,76 @@ on:
     branches: [ "main" ]
 
 jobs:
-  core-and-validation:
-    name: Rust Core & Lint Validation
+  core:
+    name: Rust core (fmt, clippy, tests)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
-          targets: aarch64-linux-android, x86_64-linux-android
 
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@v2
 
-      - name: Format Check
-        run: cargo fmt --check
+      - name: Format check
+        run: cargo fmt --all --check
 
-      - name: Clippy Lint
-        run: cargo clippy --all-targets -- -D warnings
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
 
-      - name: Run Workspace Tests
+      - name: Tests
         run: cargo test --workspace
 
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
+  android:
+    name: Android (Rust core + APK + unit tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v6
         with:
-          distribution: 'corretto'
-          java-version: '21'
+          distribution: temurin
+          java-version: '25'
 
-      - name: Cache Gradle Packages
-        uses: actions/cache@v4
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
         with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+          targets: x86_64-linux-android
 
-      - name: Run Android Unit Tests
-        run: |
-          if [ -f android/gradlew ]; then
-            cd android && ./gradlew testDebugUnitTest --no-daemon
-          fi
+      - uses: Swatinem/rust-cache@v2
 
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
 
-  ios-validation:
-    name: iOS Build Validation
+      # O Gradle chama scripts/build-android-ffi.sh (cargo-ndk + bindings Kotlin).
+      - name: Build APK & run unit tests
+        working-directory: android
+        run: ./gradlew assembleDebug testDebugUnitTest -Pjirau.rustAbis=x86_64
+
+  ios:
+    name: iOS (Rust core XCFramework + app build)
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-ios, aarch64-apple-ios-sim
 
+      - uses: Swatinem/rust-cache@v2
+
       - name: Install XcodeGen
         run: brew install xcodegen
 
-      - name: Generate Xcode Project & Build
+      - name: Build Rust core XCFramework & Swift bindings
+        run: ./scripts/build-ios-ffi.sh debug
+
+      - name: Generate Xcode project & build
         run: |
           cd ios
           xcodegen generate
           xcodebuild -project SecureVault.xcodeproj -scheme SecureVault -configuration Debug -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO
-

@@ -1,0 +1,95 @@
+# Mensagens de `jirau upgrade` (upgrade.rs).
+_version: 2
+upgrade.project:
+  en: "Project: %{name}"
+  pt-BR: "Projeto: %{name}"
+upgrade.location:
+  en: "Location: %{path}"
+  pt-BR: "Localização: %{path}"
+upgrade.versions:
+  en: "Project template: v%{project} → jirau CLI: v%{cli}"
+  pt-BR: "Template do projeto: v%{project} → jirau CLI: v%{cli}"
+upgrade.already_latest:
+  en: "The project is already on the latest template version (v%{version})."
+  pt-BR: "O projeto já está na versão mais recente do template (v%{version})."
+upgrade.force_hint:
+  en: "To re-sync anyway: jirau upgrade --force"
+  pt-BR: "Para re-sincronizar mesmo assim: jirau upgrade --force"
+upgrade.no_base:
+  en: "Project has no '%{dir}': there is no way to tell what you customized. Files that differ from the new template get a '<file>.%{suffix}' copy for review."
+  pt-BR: "Projeto sem '%{dir}': não dá para saber o que você customizou. Arquivos diferentes do template novo ganham uma cópia '<arquivo>.%{suffix}' para revisão."
+upgrade.dry_run:
+  en: "DRY-RUN MODE: no changes will be written."
+  pt-BR: "MODO DRY-RUN: nenhuma alteração será gravada."
+upgrade.generating:
+  en: "Generating the current template..."
+  pt-BR: "Gerando o template atual..."
+upgrade.generate_failed:
+  en: "Failed to generate the current template"
+  pt-BR: "Falha ao gerar o template atual"
+upgrade.generated:
+  en: "Current template generated."
+  pt-BR: "Template atual gerado."
+upgrade.comparing:
+  en: "Comparing and syncing files..."
+  pt-BR: "Comparando e sincronizando arquivos..."
+upgrade.relative_path_failed:
+  en: "Failed to compute relative path"
+  pt-BR: "Falha ao calcular caminho relativo"
+upgrade.label_created:
+  en: "[NEW]"
+  pt-BR: "[NOVO]"
+upgrade.label_updated:
+  en: "[UPDATED]"
+  pt-BR: "[ATUALIZADO]"
+upgrade.label_merged:
+  en: "[MERGED]"
+  pt-BR: "[MESCLADO]"
+upgrade.label_conflict:
+  en: "[CONFLICT]"
+  pt-BR: "[CONFLITO]"
+upgrade.label_review:
+  en: "[REVIEW]"
+  pt-BR: "[REVISAR]"
+upgrade.label_kept_deleted:
+  en: "[REMOVED BY YOU]"
+  pt-BR: "[REMOVIDO POR VOCÊ]"
+upgrade.summary_title:
+  en: "Upgrade Summary:"
+  pt-BR: "Resumo do Upgrade:"
+upgrade.summary_created:
+  en: "Created: %{count}"
+  pt-BR: "Criados: %{count}"
+upgrade.summary_updated:
+  en: "Updated: %{count}"
+  pt-BR: "Atualizados: %{count}"
+upgrade.summary_merged:
+  en: "Merged automatically: %{count}"
+  pt-BR: "Mesclados automaticamente: %{count}"
+upgrade.summary_preserved:
+  en: "Customizations preserved: %{count}"
+  pt-BR: "Customizações preservadas: %{count}"
+upgrade.summary_kept_deleted:
+  en: "Removed by you (kept out): %{count}"
+  pt-BR: "Removidos por você (mantidos fora): %{count}"
+upgrade.summary_review:
+  en: "To review (*.%{suffix}): %{count}"
+  pt-BR: "Para revisar (*.%{suffix}): %{count}"
+upgrade.summary_conflicts:
+  en: "Conflicts: %{count}"
+  pt-BR: "Conflitos: %{count}"
+upgrade.conflict_warning:
+  en: "Conflicting files contain '<<<<<<<' / '>>>>>>>' markers. Resolve them before building."
+  pt-BR: "Arquivos com conflito contêm marcadores '<<<<<<<' / '>>>>>>>'. Resolva-os antes de compilar."
+upgrade.synced:
+  en: "Project synced with template v%{version}."
+  pt-BR: "Projeto sincronizado com o template v%{version}."
+upgrade.marker_yours:
+  en: "YOUR CODE"
+  pt-BR: "SEU CÓDIGO"
+upgrade.marker_base:
+  en: "BASE"
+  pt-BR: "BASE"
+upgrade.marker_new:
+  en: "NEW TEMPLATE"
+  pt-BR: "NOVO TEMPLATE"
