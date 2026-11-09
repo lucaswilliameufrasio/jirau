@@ -4,7 +4,7 @@
 
 Todas as mudanças relevantes deste projeto são documentadas neste arquivo.
 
-## [Não lançado]
+## [0.4.0] - 2026-11-09
 
 Versão do template **0.4.0**.
 

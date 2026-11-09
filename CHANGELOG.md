@@ -4,7 +4,7 @@ English | [Português (Brasil)](CHANGELOG.pt-BR.md)
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.4.0] - 2026-11-09
 
 Template version **0.4.0**.
 
