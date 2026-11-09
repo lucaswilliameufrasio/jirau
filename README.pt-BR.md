@@ -108,7 +108,7 @@ Fluxo direto inspirado no ecossistema Flutter:
 | `jirau build [android\|ios\|desktop]` | Compila os artefatos finais (APK multi-ABI, XCFramework ou binário desktop otimizado). | `flutter build` |
 | `jirau upgrade [--force] [--dry-run]` | Aplica melhorias do template via 3-way merge, preservando modificações manuais. | `flutter upgrade` |
 
-**Idioma:** todos os comandos aceitam `--lang en|pt-BR`. Também é possível definir `JIRAU_LANG`; por padrão o jirau segue o idioma do sistema.
+**Idioma:** todos os comandos aceitam `--lang en|pt-BR`. Também é possível definir `JIRAU_LANG`; por padrão o jirau segue o idioma do sistema. Mensagens, a ajuda (`--help`) e os erros de argumentos são todos traduzidos.
 
 ### Otimizações do loop de desenvolvimento
 - **Detecção automática de ABI:** Inspeciona o emulador ou aparelho conectado (`adb shell getprop ro.product.cpu.abi`) e compila apenas o target necessário (`arm64-v8a` no celular físico ou `x86_64` no emulador).

@@ -4,9 +4,6 @@
 //! As mensagens ficam em `locales/*.yml` (formato v2 do rust-i18n: cada chave
 //! traz `en` e `pt-BR` lado a lado, o que facilita manter as duas em dia).
 
-use crate::cli::Cli;
-use clap::{Command, CommandFactory, FromArgMatches};
-
 /// Normaliza uma tag de idioma (`pt_BR.UTF-8`, `pt-PT`, `en-US`...) para um
 /// dos idiomas suportados.
 pub fn normalize(tag: &str) -> &'static str {
@@ -47,59 +44,8 @@ pub fn init_from_args(args: impl Iterator<Item = String>) {
     rust_i18n::set_locale(lang);
 }
 
-/// Texto traduzido de uma chave; `None` se a chave não existir.
-fn lookup(key: &str) -> Option<String> {
-    let text = rust_i18n::t!(key).into_owned();
-    (text != key).then_some(text)
-}
-
-/// Aplica as traduções `cli.*` aos textos de ajuda do clap.
-pub fn localize(cmd: Command) -> Command {
-    fn localize_args(mut cmd: Command, prefix: &str) -> Command {
-        let ids: Vec<String> = cmd
-            .get_arguments()
-            .map(|a| a.get_id().to_string())
-            .filter(|id| id != "help" && id != "version")
-            .collect();
-        for id in ids {
-            if let Some(help) = lookup(&format!("{prefix}.{id}")) {
-                cmd = cmd.mut_arg(id, |a| a.help(help));
-            }
-        }
-        cmd
-    }
-
-    let mut cmd = cmd;
-    if let Some(about) = lookup("cli.about") {
-        cmd = cmd.about(about);
-    }
-    if let Some(long) = lookup("cli.long_about") {
-        cmd = cmd.long_about(long);
-    }
-    cmd = localize_args(cmd, "cli");
-    let names: Vec<String> = cmd
-        .get_subcommands()
-        .map(|s| s.get_name().to_string())
-        .collect();
-    for name in names {
-        cmd = cmd.mut_subcommand(&name, |sub| {
-            let sub = match lookup(&format!("cli.{name}.about")) {
-                Some(about) => sub.about(about),
-                None => sub,
-            };
-            localize_args(sub, &format!("cli.{name}"))
-        });
-    }
-    cmd
-}
-
-pub fn parse_localized_cli() -> anyhow::Result<Cli> {
-    let matches = localize(Cli::command()).get_matches();
-    Ok(Cli::from_arg_matches(&matches)?)
-}
-
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use std::collections::BTreeMap;
 
@@ -194,18 +140,6 @@ mod tests {
                 );
             }
         }
-    }
-
-    #[test]
-    fn help_is_localized() {
-        let _guard = LOCALE_LOCK.lock().unwrap();
-        rust_i18n::set_locale("en");
-        let en = localize(Cli::command()).render_long_help().to_string();
-        rust_i18n::set_locale("pt-BR");
-        let pt = localize(Cli::command()).render_long_help().to_string();
-        rust_i18n::set_locale("en");
-        assert!(en.contains("Creates a new project"), "{en}");
-        assert!(pt.contains("Cria um novo projeto"), "{pt}");
     }
 
     /// O idioma do rust-i18n é global: testes que o trocam rodam em série.

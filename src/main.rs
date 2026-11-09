@@ -2,6 +2,7 @@ mod android_pipeline;
 mod bindings;
 mod build;
 mod cli;
+mod cli_l10n;
 mod config;
 mod dev;
 mod doctor;
@@ -31,7 +32,7 @@ rust_i18n::i18n!("locales", fallback = "en");
 
 fn main() -> Result<()> {
     i18n::init_from_args(std::env::args());
-    let cli = i18n::parse_localized_cli()?;
+    let cli = cli_l10n::parse_localized_cli()?;
 
     match cli.command {
         Some(Commands::New(args)) => handle_new(args),

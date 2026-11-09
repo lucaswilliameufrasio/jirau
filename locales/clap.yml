@@ -1,0 +1,195 @@
+# Textos fixos do clap (ajuda, uso, erros) traduzidos em src/cli_l10n.rs.
+# Em `en`, mantêm a redação original do clap.
+_version: 2
+clap.usage:
+  en: "Usage"
+  pt-BR: "Uso"
+clap.heading.commands:
+  en: "Commands"
+  pt-BR: "Comandos"
+clap.heading.arguments:
+  en: "Arguments"
+  pt-BR: "Argumentos"
+clap.heading.options:
+  en: "Options"
+  pt-BR: "Opções"
+clap.value.COMMAND:
+  en: "COMMAND"
+  pt-BR: "COMANDO"
+clap.value.OPTIONS:
+  en: "OPTIONS"
+  pt-BR: "OPÇÕES"
+clap.value.NAME:
+  en: "NAME"
+  pt-BR: "NOME"
+clap.value.PLATFORM:
+  en: "PLATFORM"
+  pt-BR: "PLATAFORMA"
+clap.value.TARGET:
+  en: "TARGET"
+  pt-BR: "ALVO"
+clap.value.DEVICE:
+  en: "DEVICE"
+  pt-BR: "DISPOSITIVO"
+clap.value.PACKAGE:
+  en: "PACKAGE"
+  pt-BR: "PACOTE"
+clap.value.PLUGIN:
+  en: "PLUGIN"
+  pt-BR: "PLUGIN"
+clap.value.STORAGE:
+  en: "STORAGE"
+  pt-BR: "ARMAZENAMENTO"
+clap.value.TEMPLATE:
+  en: "TEMPLATE"
+  pt-BR: "TEMPLATE"
+clap.value.THEME:
+  en: "THEME"
+  pt-BR: "TEMA"
+clap.value.LANG:
+  en: "LANG"
+  pt-BR: "IDIOMA"
+clap.value.ANDROID_BUILD_SYSTEM:
+  en: "ANDROID_BUILD_SYSTEM"
+  pt-BR: "SISTEMA_DE_BUILD_ANDROID"
+clap.flag.help:
+  en: "Print help"
+  pt-BR: "Mostra a ajuda"
+clap.flag.help_more:
+  en: "Print help (see more with '--help')"
+  pt-BR: "Mostra a ajuda (veja mais com '--help')"
+clap.flag.help_summary:
+  en: "Print help (see a summary with '-h')"
+  pt-BR: "Mostra a ajuda (veja um resumo com '-h')"
+clap.flag.version:
+  en: "Print version"
+  pt-BR: "Mostra a versão"
+clap.help_subcommand.about:
+  en: "Print this message or the help of the given subcommand(s)"
+  pt-BR: "Mostra esta mensagem ou a ajuda do(s) subcomando(s) informado(s)"
+clap.help_subcommand.arg:
+  en: "Print help for the subcommand(s)"
+  pt-BR: "Mostra a ajuda do(s) subcomando(s)"
+clap.possible_values:
+  en: "possible values"
+  pt-BR: "valores possíveis"
+clap.default_value:
+  en: "default"
+  pt-BR: "padrão"
+clap.subcommands:
+  en: "subcommands"
+  pt-BR: "subcomandos"
+clap.error.prefix:
+  en: "error"
+  pt-BR: "erro"
+clap.error.tip:
+  en: "tip"
+  pt-BR: "dica"
+clap.error.more_info:
+  en: "For more information, try '%{help}'."
+  pt-BR: "Para mais informações, use '%{help}'."
+clap.error.tip_escape:
+  en: "to pass '%{value}' as a value, use '%{escaped}'"
+  pt-BR: "para passar '%{value}' como valor, use '%{escaped}'"
+clap.error.argument_repeated:
+  en: "the argument '%{arg}' cannot be used multiple times"
+  pt-BR: "o argumento '%{arg}' não pode ser usado mais de uma vez"
+clap.error.argument_conflict:
+  en: "the argument '%{arg}' cannot be used with"
+  pt-BR: "o argumento '%{arg}' não pode ser usado com"
+clap.error.subcommand_conflict:
+  en: "the subcommand '%{sub}' cannot be used with"
+  pt-BR: "o subcomando '%{sub}' não pode ser usado com"
+clap.error.other_arguments:
+  en: "one or more of the other specified arguments"
+  pt-BR: "um ou mais dos outros argumentos informados"
+clap.error.no_equals:
+  en: "equal sign is needed when assigning values to '%{arg}'"
+  pt-BR: "é preciso usar '=' ao atribuir valores a '%{arg}'"
+clap.error.value_required:
+  en: "a value is required for '%{arg}' but none was supplied"
+  pt-BR: "'%{arg}' exige um valor, mas nenhum foi informado"
+clap.error.invalid_value:
+  en: "invalid value '%{value}' for '%{arg}'"
+  pt-BR: "valor inválido '%{value}' para '%{arg}'"
+clap.error.unrecognized_subcommand:
+  en: "unrecognized subcommand '%{sub}'"
+  pt-BR: "subcomando desconhecido '%{sub}'"
+clap.error.missing_required:
+  en: "the following required arguments were not provided:"
+  pt-BR: "os seguintes argumentos obrigatórios não foram informados:"
+clap.error.missing_subcommand:
+  en: "'%{sub}' requires a subcommand but one was not provided"
+  pt-BR: "'%{sub}' exige um subcomando, mas nenhum foi informado"
+clap.error.too_many_values:
+  en: "unexpected value '%{value}' for '%{arg}' found; no more were expected"
+  pt-BR: "valor inesperado '%{value}' para '%{arg}'; nenhum outro era esperado"
+clap.error.wrong_number_of_values:
+  en: "%{expected} values required for '%{arg}' but %{actual} provided"
+  pt-BR: "'%{arg}' exige %{expected} valores, mas %{actual} foram informados"
+clap.error.unknown_argument:
+  en: "unexpected argument '%{arg}' found"
+  pt-BR: "argumento inesperado '%{arg}'"
+clap.error.similar_subcommand:
+  en: "a similar subcommand exists: %{list}"
+  pt-BR: "existe um subcomando parecido: %{list}"
+clap.error.similar_subcommands:
+  en: "some similar subcommands exist: %{list}"
+  pt-BR: "existem subcomandos parecidos: %{list}"
+clap.error.similar_argument:
+  en: "a similar argument exists: %{list}"
+  pt-BR: "existe um argumento parecido: %{list}"
+clap.error.similar_arguments:
+  en: "some similar arguments exist: %{list}"
+  pt-BR: "existem argumentos parecidos: %{list}"
+clap.error.similar_value:
+  en: "a similar value exists: %{list}"
+  pt-BR: "existe um valor parecido: %{list}"
+clap.error.similar_values:
+  en: "some similar values exist: %{list}"
+  pt-BR: "existem valores parecidos: %{list}"
+clap.error.kind.invalid_value:
+  en: "invalid value for one of the arguments"
+  pt-BR: "valor inválido em um dos argumentos"
+clap.error.kind.unknown_argument:
+  en: "unexpected argument found"
+  pt-BR: "argumento inesperado"
+clap.error.kind.invalid_subcommand:
+  en: "unrecognized subcommand"
+  pt-BR: "subcomando desconhecido"
+clap.error.kind.no_equals:
+  en: "equal is needed when assigning values to one of the arguments"
+  pt-BR: "é preciso usar '=' ao atribuir valores a um dos argumentos"
+clap.error.kind.value_validation:
+  en: "invalid value for one of the arguments"
+  pt-BR: "valor inválido em um dos argumentos"
+clap.error.kind.too_many_values:
+  en: "unexpected value for an argument found"
+  pt-BR: "valor inesperado em um argumento"
+clap.error.kind.too_few_values:
+  en: "more values required for an argument"
+  pt-BR: "um argumento exige mais valores"
+clap.error.kind.wrong_number_of_values:
+  en: "too many or too few values for an argument"
+  pt-BR: "quantidade de valores incorreta em um argumento"
+clap.error.kind.argument_conflict:
+  en: "an argument cannot be used with one or more of the other specified arguments"
+  pt-BR: "um argumento não pode ser usado junto com um ou mais dos outros argumentos informados"
+clap.error.kind.missing_required_argument:
+  en: "one or more required arguments were not provided"
+  pt-BR: "um ou mais argumentos obrigatórios não foram informados"
+clap.error.kind.missing_subcommand:
+  en: "a subcommand is required but one was not provided"
+  pt-BR: "é preciso informar um subcomando"
+clap.error.kind.invalid_utf8:
+  en: "invalid UTF-8 was detected in one or more arguments"
+  pt-BR: "UTF-8 inválido em um ou mais argumentos"
+clap.error.kind.io:
+  en: "I/O error"
+  pt-BR: "erro de E/S"
+clap.error.kind.format:
+  en: "formatting error"
+  pt-BR: "erro de formatação"
+clap.error.kind.unknown:
+  en: "unknown cause"
+  pt-BR: "causa desconhecida"
